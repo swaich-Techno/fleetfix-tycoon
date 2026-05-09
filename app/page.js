@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-const SAVE_KEY = "fleetfix-tycoon-save-v3";
+const SAVE_KEY = "fleetfix-tycoon-save-v4";
 
 const STARTING_GAME = {
   started: false,
@@ -17,17 +17,31 @@ const STARTING_GAME = {
   completedJobs: 0,
   totalRevenue: 0,
   townValue: 1000,
+  day: 1,
+  dayTimer: 60,
+  salaryDue: 0,
   technicians: [],
   activeJobs: [],
+  dayOffRequests: [],
   ownedBuildings: ["Small Garage"],
   buildingLevels: {
     "Small Garage": 1,
+  },
+  parts: {
+    Tyre: 4,
+    Battery: 3,
+    "Engine Oil": 3,
+    "Brake Kit": 2,
+    "Diagnostic Chip": 2,
+    "Tow Hook": 1,
   },
   tutorial: {
     firstCall: false,
     firstHire: false,
     firstBuild: false,
     firstUpgrade: false,
+    firstSalary: false,
+    firstParts: false,
   },
 };
 
@@ -38,6 +52,45 @@ const SKILLS = [
   "Mechanical",
   "Diagnostic",
   "Towing",
+];
+
+const PARTS = [
+  {
+    name: "Tyre",
+    icon: "🛞",
+    cost: 70,
+    description: "Used for punctures and wheel repairs.",
+  },
+  {
+    name: "Battery",
+    icon: "🔋",
+    cost: 110,
+    description: "Used for electrical and start-up repairs.",
+  },
+  {
+    name: "Engine Oil",
+    icon: "🛢️",
+    cost: 90,
+    description: "Used for engine and overheating jobs.",
+  },
+  {
+    name: "Brake Kit",
+    icon: "🧱",
+    cost: 130,
+    description: "Used for brake and mechanical jobs.",
+  },
+  {
+    name: "Diagnostic Chip",
+    icon: "💾",
+    cost: 160,
+    description: "Used for inspections and diagnostics.",
+  },
+  {
+    name: "Tow Hook",
+    icon: "🪝",
+    cost: 200,
+    description: "Used for towing and rescue calls.",
+  },
 ];
 
 const TECHNICIAN_NAMES = [
@@ -62,6 +115,8 @@ const SERVICE_CALLS = [
     vehicle: "Small Car",
     problem: "Flat tyre near town road",
     skill: "Tyre",
+    partNeeded: "Tyre",
+    partQty: 1,
     duration: 18,
     rewardCoins: 120,
     rewardXp: 30,
@@ -76,6 +131,8 @@ const SERVICE_CALLS = [
     vehicle: "Delivery Van",
     problem: "Battery not starting near market",
     skill: "Electrical",
+    partNeeded: "Battery",
+    partQty: 1,
     duration: 25,
     rewardCoins: 180,
     rewardXp: 45,
@@ -90,6 +147,8 @@ const SERVICE_CALLS = [
     vehicle: "Pickup Truck",
     problem: "Engine overheating near highway",
     skill: "Engine",
+    partNeeded: "Engine Oil",
+    partQty: 1,
     duration: 35,
     rewardCoins: 240,
     rewardXp: 60,
@@ -104,6 +163,8 @@ const SERVICE_CALLS = [
     vehicle: "Trailer",
     problem: "Brake inspection required before delivery",
     skill: "Mechanical",
+    partNeeded: "Brake Kit",
+    partQty: 1,
     duration: 45,
     rewardCoins: 320,
     rewardXp: 80,
@@ -118,6 +179,8 @@ const SERVICE_CALLS = [
     vehicle: "Bus",
     problem: "Passenger bus needs emergency safety check",
     skill: "Diagnostic",
+    partNeeded: "Diagnostic Chip",
+    partQty: 1,
     duration: 55,
     rewardCoins: 450,
     rewardXp: 120,
@@ -132,6 +195,8 @@ const SERVICE_CALLS = [
     vehicle: "Heavy Truck",
     problem: "Fuel leakage detected at transport yard",
     skill: "Mechanical",
+    partNeeded: "Brake Kit",
+    partQty: 2,
     duration: 65,
     rewardCoins: 600,
     rewardXp: 150,
@@ -146,6 +211,8 @@ const SERVICE_CALLS = [
     vehicle: "Broken Trailer",
     problem: "Trailer is stuck outside city border",
     skill: "Towing",
+    partNeeded: "Tow Hook",
+    partQty: 1,
     duration: 75,
     rewardCoins: 750,
     rewardXp: 190,
@@ -160,6 +227,8 @@ const SERVICE_CALLS = [
     vehicle: "Fleet Vehicles",
     problem: "Company wants 5 vehicles inspected",
     skill: "Diagnostic",
+    partNeeded: "Diagnostic Chip",
+    partQty: 2,
     duration: 90,
     rewardCoins: 950,
     rewardXp: 240,
@@ -168,20 +237,6 @@ const SERVICE_CALLS = [
     urgency: "Contract",
     icon: "🏢",
   },
-  {
-    id: 9,
-    title: "Construction Truck Failure",
-    vehicle: "Construction Truck",
-    problem: "Hydraulic and engine failure on work site",
-    skill: "Engine",
-    duration: 100,
-    rewardCoins: 1250,
-    rewardXp: 320,
-    reputation: 18,
-    difficulty: 9,
-    urgency: "Contract",
-    icon: "🏗️",
-  },
 ];
 
 const BUILDINGS = [
@@ -189,7 +244,7 @@ const BUILDINGS = [
     name: "Parts Store",
     cost: 800,
     unlockLevel: 1,
-    description: "Improves town value and prepares for advanced repairs.",
+    description: "Allows better parts management and repair stock.",
     icon: "🏪",
   },
   {
@@ -234,6 +289,7 @@ const TABS = [
   { id: "calls", label: "Calls", icon: "🚨" },
   { id: "jobs", label: "Jobs", icon: "⏱️" },
   { id: "team", label: "Team", icon: "👨‍🔧" },
+  { id: "parts", label: "Parts", icon: "📦" },
   { id: "build", label: "Build", icon: "🏗️" },
 ];
 
@@ -251,19 +307,45 @@ function createId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
+function getSalaryForLevel(level, isOwner) {
+  if (isOwner) return 0;
+  return 90 + level * 35;
+}
+
 function createTechnician(name, isOwner = false) {
+  const level = 1;
+
   return {
     id: createId(),
     name,
     skill: isOwner
       ? "All-Rounder"
       : SKILLS[Math.floor(Math.random() * SKILLS.length)],
-    level: 1,
+    level,
     energy: 100,
+    morale: 100,
     status: "Free",
     currentJobId: null,
     isOwner,
-    avatar: isOwner ? "👑" : ["👨‍🔧", "👩‍🔧", "🧰", "🔧"][Math.floor(Math.random() * 4)],
+    salary: getSalaryForLevel(level, isOwner),
+    daysOffTaken: 0,
+    avatar: isOwner
+      ? "👑"
+      : ["👨‍🔧", "👩‍🔧", "🧰", "🔧"][Math.floor(Math.random() * 4)],
+  };
+}
+
+function normalizeTechnician(tech) {
+  return {
+    ...tech,
+    morale: tech.morale ?? 100,
+    salary: tech.salary ?? getSalaryForLevel(tech.level || 1, tech.isOwner),
+    daysOffTaken: tech.daysOffTaken ?? 0,
+    avatar:
+      tech.avatar ||
+      (tech.isOwner
+        ? "👑"
+        : ["👨‍🔧", "👩‍🔧", "🧰", "🔧"][Math.floor(Math.random() * 4)]),
   };
 }
 
@@ -298,24 +380,42 @@ export default function Home() {
   const [renameValue, setRenameValue] = useState("");
 
   useEffect(() => {
-    const savedV3 = localStorage.getItem(SAVE_KEY);
+    const savedV4 = localStorage.getItem(SAVE_KEY);
+    const savedV3 = localStorage.getItem("fleetfix-tycoon-save-v3");
     const savedV2 = localStorage.getItem("fleetfix-tycoon-save-v2");
     const savedV1 = localStorage.getItem("fleetfix-tycoon-save");
-    const savedGame = savedV3 || savedV2 || savedV1;
+    const savedGame = savedV4 || savedV3 || savedV2 || savedV1;
 
     if (savedGame) {
       const parsedGame = JSON.parse(savedGame);
+
+      const upgradedTechnicians = (parsedGame.technicians || []).map(
+        normalizeTechnician
+      );
 
       setGame({
         ...STARTING_GAME,
         ...parsedGame,
         totalRevenue: parsedGame.totalRevenue || 0,
         townValue: parsedGame.townValue || 1000,
-        technicians: parsedGame.technicians || [],
+        day: parsedGame.day || 1,
+        dayTimer: parsedGame.dayTimer || 60,
+        salaryDue: parsedGame.salaryDue || 0,
+        technicians: upgradedTechnicians,
         activeJobs: parsedGame.activeJobs || [],
+        dayOffRequests: parsedGame.dayOffRequests || [],
         ownedBuildings: parsedGame.ownedBuildings || ["Small Garage"],
-        buildingLevels: parsedGame.buildingLevels || { "Small Garage": parsedGame.garageLevel || 1 },
-        tutorial: parsedGame.tutorial || STARTING_GAME.tutorial,
+        buildingLevels: parsedGame.buildingLevels || {
+          "Small Garage": parsedGame.garageLevel || 1,
+        },
+        parts: {
+          ...STARTING_GAME.parts,
+          ...(parsedGame.parts || {}),
+        },
+        tutorial: {
+          ...STARTING_GAME.tutorial,
+          ...(parsedGame.tutorial || {}),
+        },
       });
 
       if (parsedGame.started) {
@@ -333,60 +433,120 @@ export default function Home() {
   useEffect(() => {
     const timer = setInterval(() => {
       setGame((currentGame) => {
-        if (!currentGame.started || currentGame.activeJobs.length === 0) {
-          return currentGame;
-        }
+        if (!currentGame.started) return currentGame;
 
         let updatedGame = { ...currentGame };
         let completedMessages = [];
 
-        const updatedActiveJobs = updatedGame.activeJobs
-          .map((job) => ({
-            ...job,
-            remainingTime: job.remainingTime - 1,
-          }))
-          .filter((job) => {
-            if (job.remainingTime <= 0) {
-              const technician = updatedGame.technicians.find(
-                (tech) => tech.id === job.technicianId
-              );
+        updatedGame.dayTimer -= 1;
 
-              updatedGame.coins += job.rewardCoins;
-              updatedGame.xp += job.rewardXp;
-              updatedGame.reputation += job.reputation;
-              updatedGame.completedJobs += 1;
-              updatedGame.totalRevenue += job.rewardCoins;
-              updatedGame.townValue += Math.floor(job.rewardCoins * 0.15);
-              updatedGame.tutorial = {
-                ...updatedGame.tutorial,
-                firstCall: true,
+        if (updatedGame.dayTimer <= 0) {
+          const totalSalary = updatedGame.technicians.reduce(
+            (sum, tech) => sum + (tech.isOwner ? 0 : tech.salary || 0),
+            0
+          );
+
+          updatedGame.day += 1;
+          updatedGame.dayTimer = 60;
+          updatedGame.salaryDue += totalSalary;
+
+          updatedGame.technicians = updatedGame.technicians.map((tech) => {
+            if (tech.status === "Day Off") {
+              return {
+                ...tech,
+                status: "Free",
+                energy: 100,
+                morale: Math.min(100, tech.morale + 12),
               };
-
-              updatedGame.technicians = updatedGame.technicians.map((tech) => {
-                if (tech.id === job.technicianId) {
-                  return {
-                    ...tech,
-                    status: "Free",
-                    currentJobId: null,
-                    energy: Math.max(0, tech.energy - 10),
-                    level: tech.level + 1,
-                  };
-                }
-
-                return tech;
-              });
-
-              completedMessages.push(
-                `${technician?.name || "Technician"} completed ${job.title}. Earned ${job.rewardCoins} coins, ${job.rewardXp} XP, and reputation.`
-              );
-
-              return false;
             }
 
-            return true;
+            if (updatedGame.salaryDue > 0 && !tech.isOwner) {
+              return {
+                ...tech,
+                morale: Math.max(40, tech.morale - 3),
+              };
+            }
+
+            return tech;
           });
 
-        updatedGame.activeJobs = updatedActiveJobs;
+          completedMessages.push(
+            `Day ${updatedGame.day} started. Salary due increased by ${totalSalary} coins.`
+          );
+        }
+
+        if (updatedGame.activeJobs.length > 0) {
+          const updatedActiveJobs = updatedGame.activeJobs
+            .map((job) => ({
+              ...job,
+              remainingTime: job.remainingTime - 1,
+            }))
+            .filter((job) => {
+              if (job.remainingTime <= 0) {
+                const technician = updatedGame.technicians.find(
+                  (tech) => tech.id === job.technicianId
+                );
+
+                updatedGame.coins += job.rewardCoins;
+                updatedGame.xp += job.rewardXp;
+                updatedGame.reputation += job.reputation;
+                updatedGame.completedJobs += 1;
+                updatedGame.totalRevenue += job.rewardCoins;
+                updatedGame.townValue += Math.floor(job.rewardCoins * 0.15);
+                updatedGame.tutorial = {
+                  ...updatedGame.tutorial,
+                  firstCall: true,
+                };
+
+                updatedGame.technicians = updatedGame.technicians.map((tech) => {
+                  if (tech.id === job.technicianId) {
+                    const newEnergy = Math.max(0, tech.energy - 12);
+                    const newLevel = tech.level + 1;
+                    const tired = newEnergy <= 35 && !tech.isOwner;
+
+                    if (
+                      tired &&
+                      !updatedGame.dayOffRequests.some(
+                        (request) => request.technicianId === tech.id
+                      )
+                    ) {
+                      updatedGame.dayOffRequests = [
+                        ...updatedGame.dayOffRequests,
+                        {
+                          id: createId(),
+                          technicianId: tech.id,
+                          technicianName: tech.name,
+                          reason: "Low energy after repeated service calls.",
+                        },
+                      ];
+                    }
+
+                    return {
+                      ...tech,
+                      status: "Free",
+                      currentJobId: null,
+                      energy: newEnergy,
+                      level: newLevel,
+                      salary: getSalaryForLevel(newLevel, tech.isOwner),
+                      morale: Math.max(50, tech.morale - 2),
+                    };
+                  }
+
+                  return tech;
+                });
+
+                completedMessages.push(
+                  `${technician?.name || "Technician"} completed ${job.title}. Earned ${job.rewardCoins} coins and ${job.rewardXp} XP.`
+                );
+
+                return false;
+              }
+
+              return true;
+            });
+
+          updatedGame.activeJobs = updatedActiveJobs;
+        }
 
         while (updatedGame.xp >= getXpNeeded(updatedGame.level)) {
           updatedGame.xp -= getXpNeeded(updatedGame.level);
@@ -423,23 +583,33 @@ export default function Home() {
     return Math.floor(game.totalRevenue / Math.max(1, game.completedJobs || 1));
   }, [game.totalRevenue, game.completedJobs]);
 
+  const totalDailySalary = useMemo(() => {
+    return game.technicians.reduce(
+      (sum, tech) => sum + (tech.isOwner ? 0 : tech.salary || 0),
+      0
+    );
+  }, [game.technicians]);
+
   const tutorialProgress = useMemo(() => {
     const steps = [
       game.tutorial.firstCall,
       game.tutorial.firstHire,
       game.tutorial.firstBuild,
       game.tutorial.firstUpgrade,
+      game.tutorial.firstSalary,
+      game.tutorial.firstParts,
     ];
     return steps.filter(Boolean).length;
   }, [game.tutorial]);
 
   const nextGoal = useMemo(() => {
     if (!game.tutorial.firstCall) return "Complete your first service call.";
+    if (!game.tutorial.firstParts) return "Buy parts from the Parts Shop.";
     if (!game.tutorial.firstHire) return "Hire one more technician.";
+    if (!game.tutorial.firstSalary) return "Pay your first technician salary.";
     if (!game.tutorial.firstBuild) return "Build your first extra building.";
     if (!game.tutorial.firstUpgrade) return "Upgrade your garage.";
     if (game.level < 5) return "Reach Level 5 to unlock Training Center.";
-    if (!game.ownedBuildings.includes("Tow Yard")) return "Build Tow Yard for rescue jobs.";
     return "Grow reputation and unlock fleet contracts.";
   }, [game]);
 
@@ -474,6 +644,10 @@ export default function Home() {
     );
   }
 
+  function hasEnoughParts(serviceCall) {
+    return (game.parts[serviceCall.partNeeded] || 0) >= serviceCall.partQty;
+  }
+
   function dispatchTechnician(serviceCall, technicianId) {
     const technician = game.technicians.find((tech) => tech.id === technicianId);
 
@@ -483,16 +657,25 @@ export default function Home() {
     }
 
     if (technician.status !== "Free") {
-      setMessage(`${technician.name} is already working.`);
+      setMessage(`${technician.name} is not available.`);
+      return;
+    }
+
+    if (!hasEnoughParts(serviceCall)) {
+      setMessage(
+        `Not enough ${serviceCall.partNeeded}. Buy parts from the Parts Shop.`
+      );
+      setActiveTab("parts");
       return;
     }
 
     const skillMatch =
       technician.skill === serviceCall.skill || technician.skill === "All-Rounder";
 
+    const moraleBonus = technician.morale >= 80 ? 0.9 : 1;
     const boostedDuration = skillMatch
-      ? Math.max(8, Math.floor(serviceCall.duration * 0.7))
-      : serviceCall.duration;
+      ? Math.max(8, Math.floor(serviceCall.duration * 0.7 * moraleBonus))
+      : Math.max(8, Math.floor(serviceCall.duration * moraleBonus));
 
     const activeJob = {
       ...serviceCall,
@@ -506,6 +689,11 @@ export default function Home() {
 
     setGame((currentGame) => ({
       ...currentGame,
+      parts: {
+        ...currentGame.parts,
+        [serviceCall.partNeeded]:
+          (currentGame.parts[serviceCall.partNeeded] || 0) - serviceCall.partQty,
+      },
       activeJobs: [...currentGame.activeJobs, activeJob],
       technicians: currentGame.technicians.map((tech) => {
         if (tech.id === technicianId) {
@@ -527,14 +715,38 @@ export default function Home() {
     setActiveTab("jobs");
     setMessage(
       skillMatch
-        ? `${technician.name} is a skill match. Job time reduced by 30%.`
-        : `${technician.name} has been dispatched to ${serviceCall.title}.`
+        ? `${technician.name} is a skill match. Job time reduced. Parts used: ${serviceCall.partQty} ${serviceCall.partNeeded}.`
+        : `${technician.name} dispatched. Parts used: ${serviceCall.partQty} ${serviceCall.partNeeded}.`
     );
   }
 
   function refreshCalls() {
     setAvailableCalls(getRandomServiceCalls(game.level));
     setMessage("New emergency service calls received.");
+  }
+
+  function buyPart(part, qty) {
+    const cost = part.cost * qty;
+
+    if (game.coins < cost) {
+      setMessage(`You need ${cost} coins to buy ${qty} ${part.name}.`);
+      return;
+    }
+
+    setGame((currentGame) => ({
+      ...currentGame,
+      coins: currentGame.coins - cost,
+      parts: {
+        ...currentGame.parts,
+        [part.name]: (currentGame.parts[part.name] || 0) + qty,
+      },
+      tutorial: {
+        ...currentGame.tutorial,
+        firstParts: true,
+      },
+    }));
+
+    setMessage(`Bought ${qty} ${part.name} for ${cost} coins.`);
   }
 
   function hireTechnician() {
@@ -560,7 +772,90 @@ export default function Home() {
       },
     }));
 
-    setMessage(`${newTechnician.name} joined as a ${newTechnician.skill} technician.`);
+    setMessage(
+      `${newTechnician.name} joined as a ${newTechnician.skill} technician. Daily salary: ${newTechnician.salary} coins.`
+    );
+  }
+
+  function paySalaries() {
+    if (game.salaryDue <= 0) {
+      setMessage("No salary is due right now.");
+      return;
+    }
+
+    if (game.coins < game.salaryDue) {
+      setMessage(`You need ${game.salaryDue} coins to pay salaries.`);
+      return;
+    }
+
+    setGame((currentGame) => ({
+      ...currentGame,
+      coins: currentGame.coins - currentGame.salaryDue,
+      salaryDue: 0,
+      technicians: currentGame.technicians.map((tech) => ({
+        ...tech,
+        morale: Math.min(100, tech.morale + 15),
+      })),
+      tutorial: {
+        ...currentGame.tutorial,
+        firstSalary: true,
+      },
+    }));
+
+    setMessage("Salaries paid. Technician morale improved.");
+  }
+
+  function approveDayOff(requestId) {
+    const request = game.dayOffRequests.find((item) => item.id === requestId);
+
+    if (!request) return;
+
+    setGame((currentGame) => ({
+      ...currentGame,
+      dayOffRequests: currentGame.dayOffRequests.filter(
+        (item) => item.id !== requestId
+      ),
+      technicians: currentGame.technicians.map((tech) => {
+        if (tech.id === request.technicianId) {
+          return {
+            ...tech,
+            status: "Day Off",
+            energy: 100,
+            morale: Math.min(100, tech.morale + 18),
+            daysOffTaken: tech.daysOffTaken + 1,
+          };
+        }
+
+        return tech;
+      }),
+    }));
+
+    setMessage(`${request.technicianName} is on day off. Morale improved.`);
+  }
+
+  function denyDayOff(requestId) {
+    const request = game.dayOffRequests.find((item) => item.id === requestId);
+
+    if (!request) return;
+
+    setGame((currentGame) => ({
+      ...currentGame,
+      dayOffRequests: currentGame.dayOffRequests.filter(
+        (item) => item.id !== requestId
+      ),
+      technicians: currentGame.technicians.map((tech) => {
+        if (tech.id === request.technicianId) {
+          return {
+            ...tech,
+            morale: Math.max(20, tech.morale - 12),
+          };
+        }
+
+        return tech;
+      }),
+    }));
+
+    setMessage(`${request.technicianName}'s day off was denied. Morale decreased.`);
   }
 
   function upgradeGarage() {
@@ -586,7 +881,7 @@ export default function Home() {
       },
     }));
 
-    setMessage(`Garage upgraded to Level ${game.garageLevel + 1}. Bigger jobs are coming.`);
+    setMessage(`Garage upgraded to Level ${game.garageLevel + 1}.`);
   }
 
   function buyBuilding(building) {
@@ -656,10 +951,11 @@ export default function Home() {
       technicians: currentGame.technicians.map((tech) => ({
         ...tech,
         energy: tech.status === "Free" ? 100 : tech.energy,
+        morale: tech.status === "Free" ? Math.min(100, tech.morale + 5) : tech.morale,
       })),
     }));
 
-    setMessage("Free technicians have rested and recovered energy.");
+    setMessage("Free technicians recovered energy and morale.");
   }
 
   function startRename(tech) {
@@ -687,6 +983,7 @@ export default function Home() {
 
   function resetGame() {
     localStorage.removeItem(SAVE_KEY);
+    localStorage.removeItem("fleetfix-tycoon-save-v3");
     localStorage.removeItem("fleetfix-tycoon-save-v2");
     localStorage.removeItem("fleetfix-tycoon-save");
     setGame(STARTING_GAME);
@@ -708,8 +1005,8 @@ export default function Home() {
           <div style={styles.logo}>🛠️🚛</div>
           <h1 style={styles.title}>FleetFix Tycoon</h1>
           <p style={styles.subtitle}>
-            Start with one broken garage, answer service calls, hire technicians,
-            and build a repair empire across cities.
+            Build a repair empire. Manage technicians, salaries, parts, service calls,
+            and a growing 3D-style repair town.
           </p>
 
           <div style={styles.formGrid}>
@@ -768,8 +1065,8 @@ export default function Home() {
           <Stat label="XP" value={`${game.xp}/${getXpNeeded(game.level)}`} />
           <Stat label="Level" value={game.level} />
           <Stat label="Rep" value={`⭐ ${game.reputation}`} />
-          <Stat label="Jobs" value={game.completedJobs} />
-          <Stat label="Town Value" value={`🏙️ ${game.townValue}`} />
+          <Stat label="Day" value={`${game.day} / ${game.dayTimer}s`} />
+          <Stat label="Salary Due" value={`🧾 ${game.salaryDue}`} />
         </div>
       </header>
 
@@ -793,10 +1090,12 @@ export default function Home() {
           </div>
 
           <div style={styles.tutorialBox}>
-            <b>Tutorial Mission:</b> {tutorialProgress}/4 complete
+            <b>Tutorial:</b> {tutorialProgress}/6 complete
             <div style={styles.tutorialSteps}>
-              <span>{game.tutorial.firstCall ? "✅" : "⬜"} First call</span>
+              <span>{game.tutorial.firstCall ? "✅" : "⬜"} Call</span>
+              <span>{game.tutorial.firstParts ? "✅" : "⬜"} Parts</span>
               <span>{game.tutorial.firstHire ? "✅" : "⬜"} Hire</span>
+              <span>{game.tutorial.firstSalary ? "✅" : "⬜"} Salary</span>
               <span>{game.tutorial.firstBuild ? "✅" : "⬜"} Build</span>
               <span>{game.tutorial.firstUpgrade ? "✅" : "⬜"} Upgrade</span>
             </div>
@@ -811,7 +1110,7 @@ export default function Home() {
               <div>
                 <h2 style={styles.sectionTitle}>🏜️ {game.townName}</h2>
                 <p style={styles.smallText}>
-                  Township-style repair map. Roads bring calls. Buildings grow your empire.
+                  3D-style repair town map. Grow from a small garage to a fleet empire.
                 </p>
               </div>
 
@@ -823,38 +1122,20 @@ export default function Home() {
             <div style={styles.empireStats}>
               <MiniStat title="Company Rank" value={companyRank} />
               <MiniStat title="Avg Job Revenue" value={`🪙 ${dailyRevenue}`} />
-              <MiniStat title="Buildings" value={game.ownedBuildings.length} />
-              <MiniStat title="Technicians" value={game.technicians.length} />
+              <MiniStat title="Daily Salary" value={`🧾 ${totalDailySalary}`} />
+              <MiniStat title="Town Value" value={`🏙️ ${game.townValue}`} />
             </div>
 
-            <div style={styles.mapArea}>
-              <TownTile icon="🏚️" title={`Garage Lvl ${game.garageLevel}`} subtitle="Main repair base" owned />
-              <TownTile icon="🛣️" title="Main Road" subtitle="Service calls arrive" owned road />
-              <TownTile icon="🚨" title="Call Point" subtitle="Breakdowns reported" owned />
-              <TownTile icon="🌵" title="Barren Land" subtitle="Future expansion" owned />
-              <TownTile icon="🚧" title="Service Zone" subtitle="Repair vehicles here" owned />
-              <TownTile icon="🅿️" title="Truck Parking" subtitle="Waiting area" owned />
-
-              {BUILDINGS.map((building) => (
-                <TownTile
-                  key={building.name}
-                  icon={building.icon}
-                  title={`${building.name}${
-                    game.ownedBuildings.includes(building.name)
-                      ? ` Lvl ${game.buildingLevels[building.name] || 1}`
-                      : ""
-                  }`}
-                  subtitle={
-                    game.ownedBuildings.includes(building.name)
-                      ? "Built and operating"
-                      : game.level >= building.unlockLevel
-                      ? `Ready: ${building.cost} coins`
-                      : `Unlocks at Level ${building.unlockLevel}`
-                  }
-                  owned={game.ownedBuildings.includes(building.name)}
-                  locked={game.level < building.unlockLevel}
-                />
-              ))}
+            <div style={styles.isoWorld}>
+              <IsoTile icon="🏚️" title={`Garage Lvl ${game.garageLevel}`} type="garage" />
+              <IsoTile icon="🛣️" title="Main Road" type="road" />
+              <IsoTile icon="🚨" title="Call Point" type="call" />
+              <IsoTile icon="🏪" title={game.ownedBuildings.includes("Parts Store") ? "Parts Store" : "Parts Plot"} type={game.ownedBuildings.includes("Parts Store") ? "shop" : "empty"} />
+              <IsoTile icon="🚚" title={game.ownedBuildings.includes("Tow Yard") ? "Tow Yard" : "Tow Plot"} type={game.ownedBuildings.includes("Tow Yard") ? "truck" : "empty"} />
+              <IsoTile icon="🎓" title={game.ownedBuildings.includes("Training Center") ? "Training" : "Training Plot"} type={game.ownedBuildings.includes("Training Center") ? "training" : "empty"} />
+              <IsoTile icon="⛽" title={game.ownedBuildings.includes("Fuel Station") ? "Fuel Station" : "Fuel Plot"} type={game.ownedBuildings.includes("Fuel Station") ? "fuel" : "empty"} />
+              <IsoTile icon="🌵" title="Barren Land" type="empty" />
+              <IsoTile icon="🅿️" title="Truck Parking" type="parking" />
             </div>
           </Panel>
         )}
@@ -865,7 +1146,7 @@ export default function Home() {
               <div>
                 <h2 style={styles.sectionTitle}>🚨 Service Call Center</h2>
                 <p style={styles.smallText}>
-                  New breakdowns appear here. Choose the best technician for speed bonus.
+                  Calls now require parts. Stock your Parts Shop before dispatching.
                 </p>
               </div>
 
@@ -892,14 +1173,17 @@ export default function Home() {
 
                     <div style={styles.infoList}>
                       <p><b>Vehicle:</b> {call.vehicle}</p>
-                      <p><b>Skill Needed:</b> {call.skill}</p>
-                      <p><b>Base Time:</b> {call.duration}s</p>
+                      <p><b>Skill:</b> {call.skill}</p>
+                      <p>
+                        <b>Parts:</b> {call.partQty} {call.partNeeded}{" "}
+                        {hasEnoughParts(call) ? "✅" : "❌"}
+                      </p>
                       <p><b>Reward:</b> 🪙 {call.rewardCoins} • XP {call.rewardXp}</p>
                     </div>
 
                     <div style={styles.buttonStack}>
                       {freeTechnicians.length === 0 ? (
-                        <div style={styles.warningBox}>No free technicians. Rest or wait.</div>
+                        <div style={styles.warningBox}>No free technicians.</div>
                       ) : (
                         freeTechnicians.map((tech) => {
                           const match =
@@ -927,7 +1211,9 @@ export default function Home() {
         {activeTab === "jobs" && (
           <Panel>
             <h2 style={styles.sectionTitle}>⏱️ Active Jobs</h2>
-            <p style={styles.smallText}>Track all current repair work and roadside responses.</p>
+            <p style={styles.smallText}>
+              Track ongoing repairs, roadside calls, and fleet response jobs.
+            </p>
 
             <div style={styles.cardsGrid}>
               {game.activeJobs.length === 0 ? (
@@ -943,6 +1229,7 @@ export default function Home() {
                         <div>
                           <h3 style={styles.cardTitle}>{job.icon} {job.title}</h3>
                           <p style={styles.smallText}>Technician: {job.technicianName}</p>
+                          <p style={styles.smallText}>Part Used: {job.partNeeded}</p>
                           {job.skillMatch && (
                             <p style={styles.bonusText}>⚡ Skill match bonus active</p>
                           )}
@@ -968,10 +1255,37 @@ export default function Home() {
               <div>
                 <h2 style={styles.sectionTitle}>👨‍🔧 Technician Team</h2>
                 <p style={styles.smallText}>
-                  Manage technicians. Matching their skill with calls reduces job time.
+                  Manage salary, morale, energy, and day off requests.
                 </p>
               </div>
+
+              <button style={styles.mainButtonSmall} onClick={paySalaries}>
+                Pay Salaries — 🧾 {game.salaryDue}
+              </button>
             </div>
+
+            {game.dayOffRequests.length > 0 && (
+              <div style={styles.dayOffBox}>
+                <h3 style={styles.cardTitle}>🌴 Day Off Requests</h3>
+                {game.dayOffRequests.map((request) => (
+                  <div key={request.id} style={styles.requestRow}>
+                    <div>
+                      <b>{request.technicianName}</b>
+                      <p style={styles.smallText}>{request.reason}</p>
+                    </div>
+
+                    <div style={styles.requestButtons}>
+                      <button style={styles.greenSmallButton} onClick={() => approveDayOff(request.id)}>
+                        Approve
+                      </button>
+                      <button style={styles.dangerSmallButton} onClick={() => denyDayOff(request.id)}>
+                        Deny
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div style={styles.cardsGrid}>
               {game.technicians.map((tech) => (
@@ -986,8 +1300,18 @@ export default function Home() {
                     <span
                       style={{
                         ...styles.statusBadge,
-                        background: tech.status === "Free" ? "#dcfce7" : "#fef3c7",
-                        color: tech.status === "Free" ? "#166534" : "#92400e",
+                        background:
+                          tech.status === "Free"
+                            ? "#dcfce7"
+                            : tech.status === "Day Off"
+                            ? "#dbeafe"
+                            : "#fef3c7",
+                        color:
+                          tech.status === "Free"
+                            ? "#166534"
+                            : tech.status === "Day Off"
+                            ? "#1d4ed8"
+                            : "#92400e",
                       }}
                     >
                       {tech.status}
@@ -995,12 +1319,12 @@ export default function Home() {
                   </div>
 
                   <p style={styles.smallText}>Skill: {tech.skill}</p>
-                  <p style={styles.smallText}>Rank: Level {tech.level}</p>
+                  <p style={styles.smallText}>Level: {tech.level}</p>
+                  <p style={styles.smallText}>Salary/day: 🧾 {tech.salary}</p>
+                  <p style={styles.smallText}>Days off taken: {tech.daysOffTaken}</p>
 
-                  <div style={styles.energyOuter}>
-                    <div style={{ ...styles.energyInner, width: `${tech.energy}%` }} />
-                  </div>
-                  <p style={styles.smallText}>Energy: {tech.energy}%</p>
+                  <Bar label="Energy" value={tech.energy} color="#16a34a" />
+                  <Bar label="Morale" value={tech.morale} color="#2563eb" />
 
                   {renameId === tech.id ? (
                     <div style={styles.renameBox}>
@@ -1034,11 +1358,47 @@ export default function Home() {
           </Panel>
         )}
 
+        {activeTab === "parts" && (
+          <Panel>
+            <div style={styles.sectionHeader}>
+              <div>
+                <h2 style={styles.sectionTitle}>📦 Parts Shop</h2>
+                <p style={styles.smallText}>
+                  Buy and manage parts. Every repair now consumes parts.
+                </p>
+              </div>
+            </div>
+
+            <div style={styles.cardsGrid}>
+              {PARTS.map((part) => (
+                <div key={part.name} style={styles.partCard}>
+                  <div style={styles.partIcon}>{part.icon}</div>
+                  <h3 style={styles.cardTitle}>{part.name}</h3>
+                  <p style={styles.smallText}>{part.description}</p>
+                  <p style={styles.smallText}>
+                    Stock: <b>{game.parts[part.name] || 0}</b>
+                  </p>
+                  <p style={styles.smallText}>Cost: 🪙 {part.cost} each</p>
+
+                  <div style={styles.partButtons}>
+                    <button style={styles.orangeSmallButton} onClick={() => buyPart(part, 1)}>
+                      Buy 1
+                    </button>
+                    <button style={styles.darkButton} onClick={() => buyPart(part, 5)}>
+                      Buy 5
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Panel>
+        )}
+
         {activeTab === "build" && (
           <Panel>
             <h2 style={styles.sectionTitle}>🏗️ Build & Upgrade</h2>
             <p style={styles.smallText}>
-              Upgrade your garage, unlock new buildings, and increase town value.
+              Build repair facilities and upgrade them to increase town value.
             </p>
 
             <button style={styles.mainButton} onClick={upgradeGarage}>
@@ -1062,7 +1422,7 @@ export default function Home() {
                       </h3>
                       <p style={styles.smallText}>{building.description}</p>
                       <p style={styles.smallText}>
-                        Unlock Level: {building.unlockLevel} • Build Cost: 🪙 {building.cost}
+                        Unlock Level: {building.unlockLevel} • Cost: 🪙 {building.cost}
                       </p>
 
                       <div style={styles.buildButtons}>
@@ -1141,36 +1501,52 @@ function Panel({ children }) {
   return <div style={styles.panel}>{children}</div>;
 }
 
-function TownTile({ icon, title, subtitle, owned, locked, road }) {
+function EmptyBox({ text }) {
+  return <div style={styles.emptyBox}>{text}</div>;
+}
+
+function Bar({ label, value, color }) {
   return (
-    <div
-      style={{
-        ...styles.townTile,
-        opacity: locked ? 0.55 : 1,
-        border: owned ? "2px solid #22c55e" : "1px solid #d6d3d1",
-        background: road
-          ? "linear-gradient(135deg, #57534e, #a8a29e)"
-          : "rgba(255,255,255,0.9)",
-        color: road ? "white" : "#1c1917",
-      }}
-    >
-      <div style={styles.townIcon}>{locked ? "🔒" : icon}</div>
-      <h3 style={styles.cardTitle}>{title}</h3>
-      <p style={{ ...styles.smallText, color: road ? "#f5f5f4" : "#57534e" }}>
-        {subtitle}
-      </p>
+    <div style={styles.barBlock}>
+      <div style={styles.barLabel}>
+        <span>{label}</span>
+        <span>{value}%</span>
+      </div>
+      <div style={styles.barOuter}>
+        <div style={{ ...styles.barInner, width: `${value}%`, background: color }} />
+      </div>
     </div>
   );
 }
 
-function EmptyBox({ text }) {
-  return <div style={styles.emptyBox}>{text}</div>;
+function IsoTile({ icon, title, type }) {
+  const colorMap = {
+    garage: "linear-gradient(135deg, #fb923c, #9a3412)",
+    road: "linear-gradient(135deg, #44403c, #1c1917)",
+    call: "linear-gradient(135deg, #f87171, #991b1b)",
+    shop: "linear-gradient(135deg, #facc15, #ca8a04)",
+    truck: "linear-gradient(135deg, #60a5fa, #1d4ed8)",
+    training: "linear-gradient(135deg, #a78bfa, #6d28d9)",
+    fuel: "linear-gradient(135deg, #4ade80, #15803d)",
+    parking: "linear-gradient(135deg, #94a3b8, #475569)",
+    empty: "linear-gradient(135deg, #d6d3d1, #a8a29e)",
+  };
+
+  return (
+    <div style={styles.isoTileWrap}>
+      <div style={{ ...styles.isoTile, background: colorMap[type] || colorMap.empty }}>
+        <div style={styles.isoIcon}>{icon}</div>
+        <div style={styles.isoTitle}>{title}</div>
+      </div>
+      <div style={styles.isoShadow} />
+    </div>
+  );
 }
 
 const styles = {
   startPage: {
     minHeight: "100vh",
-    background: "linear-gradient(135deg, #fef3c7, #fed7aa, #e7e5e4)",
+    background: "radial-gradient(circle at top, #fff7ed, #fed7aa, #a16207)",
     color: "#1c1917",
     display: "flex",
     alignItems: "center",
@@ -1181,15 +1557,15 @@ const styles = {
   startCard: {
     width: "100%",
     maxWidth: 780,
-    background: "rgba(255,255,255,0.92)",
-    border: "1px solid #d6d3d1",
-    borderRadius: 28,
-    padding: 28,
-    boxShadow: "0 20px 45px rgba(0,0,0,0.18)",
+    background: "rgba(255,255,255,0.94)",
+    border: "1px solid #fed7aa",
+    borderRadius: 32,
+    padding: 30,
+    boxShadow: "0 30px 70px rgba(67,20,7,0.32)",
     textAlign: "center",
   },
   logo: {
-    fontSize: 64,
+    fontSize: 66,
     marginBottom: 10,
   },
   title: {
@@ -1201,7 +1577,7 @@ const styles = {
     color: "#57534e",
     fontSize: 17,
     lineHeight: 1.6,
-    maxWidth: 640,
+    maxWidth: 660,
     margin: "0 auto 24px",
   },
   formGrid: {
@@ -1225,33 +1601,23 @@ const styles = {
     width: "100%",
     boxSizing: "border-box",
   },
-  mainButton: {
-    width: "100%",
-    marginTop: 16,
-    background: "#ea580c",
-    color: "white",
-    border: "none",
-    borderRadius: 16,
-    padding: "14px 18px",
-    fontWeight: 900,
-    fontSize: 16,
-    cursor: "pointer",
-  },
   gamePage: {
     minHeight: "100vh",
-    background: "#f5f5f4",
+    background:
+      "radial-gradient(circle at top left, #fff7ed, #f5f5f4 38%, #e7e5e4)",
     color: "#1c1917",
     fontFamily: "Arial, sans-serif",
     paddingBottom: 32,
   },
   header: {
     background: "rgba(255,255,255,0.96)",
-    borderBottom: "1px solid #d6d3d1",
+    borderBottom: "1px solid #fed7aa",
     padding: 16,
     display: "flex",
     justifyContent: "space-between",
     gap: 14,
     flexWrap: "wrap",
+    boxShadow: "0 8px 25px rgba(0,0,0,0.06)",
   },
   headerTitle: {
     margin: 0,
@@ -1275,13 +1641,13 @@ const styles = {
     gap: 8,
     minWidth: 320,
     flex: 1,
-    maxWidth: 760,
+    maxWidth: 800,
   },
   statBox: {
-    background: "#fafaf9",
-    border: "1px solid #e7e5e4",
-    borderRadius: 14,
-    padding: "8px 10px",
+    background: "#fff7ed",
+    border: "1px solid #fed7aa",
+    borderRadius: 15,
+    padding: "9px 10px",
   },
   statLabel: {
     margin: 0,
@@ -1300,7 +1666,7 @@ const styles = {
     margin: "14px auto 0",
     padding: "0 16px",
     display: "grid",
-    gridTemplateColumns: "repeat(5, 1fr)",
+    gridTemplateColumns: "repeat(6, 1fr)",
     gap: 8,
   },
   navButton: {
@@ -1308,7 +1674,7 @@ const styles = {
     background: "white",
     color: "#44403c",
     borderRadius: 16,
-    padding: "11px 8px",
+    padding: "11px 6px",
     fontWeight: 900,
     cursor: "pointer",
     display: "grid",
@@ -1319,7 +1685,7 @@ const styles = {
     background: "#ffedd5",
     color: "#9a3412",
     borderRadius: 16,
-    padding: "11px 8px",
+    padding: "11px 6px",
     fontWeight: 900,
     cursor: "pointer",
     display: "grid",
@@ -1358,12 +1724,21 @@ const styles = {
     marginTop: 8,
     fontSize: 13,
   },
+  message: {
+    background: "#ffedd5",
+    border: "1px solid #fdba74",
+    color: "#7c2d12",
+    borderRadius: 18,
+    padding: 14,
+    fontWeight: 800,
+    lineHeight: 1.4,
+  },
   panel: {
-    background: "white",
-    border: "1px solid #d6d3d1",
-    borderRadius: 24,
+    background: "rgba(255,255,255,0.94)",
+    border: "1px solid #fed7aa",
+    borderRadius: 28,
     padding: 20,
-    boxShadow: "0 10px 25px rgba(0,0,0,0.06)",
+    boxShadow: "0 18px 40px rgba(67,20,7,0.08)",
   },
   sectionHeader: {
     display: "flex",
@@ -1382,31 +1757,64 @@ const styles = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
     gap: 10,
-    marginBottom: 14,
+    marginBottom: 18,
   },
   miniStat: {
-    background: "#fafaf9",
-    border: "1px solid #e7e5e4",
+    background: "#fff7ed",
+    border: "1px solid #fed7aa",
     borderRadius: 16,
     padding: 12,
   },
-  mapArea: {
+  isoWorld: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-    gap: 14,
-    background: "linear-gradient(135deg, #fde68a, #e7e5e4, #fed7aa)",
-    borderRadius: 20,
-    padding: 16,
+    gap: 18,
+    background:
+      "linear-gradient(135deg, #facc15, #fdba74 45%, #a8a29e)",
+    borderRadius: 28,
+    padding: 24,
+    perspective: 900,
+    overflow: "hidden",
   },
-  townTile: {
-    minHeight: 122,
-    borderRadius: 20,
+  isoTileWrap: {
+    position: "relative",
+    minHeight: 138,
+  },
+  isoTile: {
+    height: 112,
+    borderRadius: 22,
+    color: "white",
     padding: 14,
-    boxSizing: "border-box",
-    boxShadow: "0 10px 18px rgba(0,0,0,0.07)",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    transform: "rotateX(52deg) rotateZ(-38deg)",
+    transformStyle: "preserve-3d",
+    boxShadow: "12px 18px 0 rgba(68,64,60,0.35)",
+    border: "2px solid rgba(255,255,255,0.5)",
+    textAlign: "center",
   },
-  townIcon: {
-    fontSize: 38,
+  isoIcon: {
+    fontSize: 34,
+    transform: "rotateZ(38deg) rotateX(-52deg)",
+  },
+  isoTitle: {
+    fontWeight: 900,
+    fontSize: 13,
+    marginTop: 6,
+    transform: "rotateZ(38deg) rotateX(-52deg)",
+    textShadow: "0 2px 3px rgba(0,0,0,0.25)",
+  },
+  isoShadow: {
+    position: "absolute",
+    left: 18,
+    right: 4,
+    bottom: 4,
+    height: 22,
+    background: "rgba(0,0,0,0.18)",
+    borderRadius: "50%",
+    filter: "blur(8px)",
   },
   cardsGrid: {
     display: "grid",
@@ -1414,10 +1822,11 @@ const styles = {
     gap: 14,
   },
   callCard: {
-    background: "#fafaf9",
-    border: "1px solid #d6d3d1",
-    borderRadius: 20,
+    background: "#fffaf5",
+    border: "1px solid #fed7aa",
+    borderRadius: 22,
     padding: 16,
+    boxShadow: "0 10px 22px rgba(0,0,0,0.06)",
   },
   callTop: {
     display: "flex",
@@ -1431,16 +1840,28 @@ const styles = {
     fontSize: 12,
   },
   jobCard: {
-    background: "#fafaf9",
-    border: "1px solid #d6d3d1",
-    borderRadius: 20,
+    background: "#fffaf5",
+    border: "1px solid #fed7aa",
+    borderRadius: 22,
     padding: 16,
   },
   techCard: {
-    background: "#fafaf9",
-    border: "1px solid #d6d3d1",
-    borderRadius: 20,
+    background: "#fffaf5",
+    border: "1px solid #fed7aa",
+    borderRadius: 22,
     padding: 16,
+  },
+  partCard: {
+    background: "#fffaf5",
+    border: "1px solid #fed7aa",
+    borderRadius: 22,
+    padding: 16,
+  },
+  partIcon: {
+    fontSize: 42,
+  },
+  cardIcon: {
+    fontSize: 42,
   },
   techAvatar: {
     width: 58,
@@ -1451,9 +1872,6 @@ const styles = {
     placeItems: "center",
     fontSize: 32,
     marginBottom: 8,
-  },
-  cardIcon: {
-    fontSize: 42,
   },
   cardTitle: {
     margin: "6px 0",
@@ -1488,13 +1906,33 @@ const styles = {
     fontWeight: 900,
     cursor: "pointer",
   },
-  lightSmallButton: {
-    marginTop: 10,
-    background: "white",
-    color: "#1c1917",
-    border: "1px solid #d6d3d1",
+  dangerSmallButton: {
+    background: "#dc2626",
+    color: "white",
+    border: "none",
     borderRadius: 12,
     padding: "10px 12px",
+    fontWeight: 900,
+    cursor: "pointer",
+  },
+  mainButton: {
+    width: "100%",
+    marginTop: 16,
+    background: "#ea580c",
+    color: "white",
+    border: "none",
+    borderRadius: 16,
+    padding: "14px 18px",
+    fontWeight: 900,
+    fontSize: 16,
+    cursor: "pointer",
+  },
+  mainButtonSmall: {
+    background: "#ea580c",
+    color: "white",
+    border: "none",
+    borderRadius: 14,
+    padding: "11px 14px",
     fontWeight: 900,
     cursor: "pointer",
   },
@@ -1504,6 +1942,16 @@ const styles = {
     border: "none",
     borderRadius: 12,
     padding: "10px 14px",
+    fontWeight: 900,
+    cursor: "pointer",
+  },
+  lightSmallButton: {
+    marginTop: 10,
+    background: "white",
+    color: "#1c1917",
+    border: "1px solid #d6d3d1",
+    borderRadius: 12,
+    padding: "10px 12px",
     fontWeight: 900,
     cursor: "pointer",
   },
@@ -1578,38 +2026,38 @@ const styles = {
     borderRadius: 999,
     transition: "width 0.3s ease",
   },
-  energyOuter: {
-    height: 10,
-    background: "#e7e5e4",
-    borderRadius: 999,
-    overflow: "hidden",
-    marginTop: 10,
-  },
-  energyInner: {
-    height: "100%",
-    background: "#16a34a",
-    borderRadius: 999,
-  },
   bonusText: {
     color: "#15803d",
     fontWeight: 900,
     margin: "4px 0",
     fontSize: 13,
   },
-  message: {
-    background: "#ffedd5",
-    border: "1px solid #fdba74",
-    color: "#7c2d12",
-    borderRadius: 18,
-    padding: 14,
-    fontWeight: 800,
-    lineHeight: 1.4,
-  },
   statusBadge: {
     borderRadius: 999,
     padding: "5px 9px",
     fontWeight: 900,
     fontSize: 12,
+  },
+  barBlock: {
+    marginTop: 10,
+  },
+  barLabel: {
+    display: "flex",
+    justifyContent: "space-between",
+    fontSize: 12,
+    fontWeight: 900,
+    color: "#57534e",
+    marginBottom: 4,
+  },
+  barOuter: {
+    height: 10,
+    background: "#e7e5e4",
+    borderRadius: 999,
+    overflow: "hidden",
+  },
+  barInner: {
+    height: "100%",
+    borderRadius: 999,
   },
   renameBox: {
     display: "grid",
@@ -1623,14 +2071,41 @@ const styles = {
     gap: 10,
     marginTop: 16,
   },
+  partButtons: {
+    display: "flex",
+    gap: 8,
+    flexWrap: "wrap",
+    marginTop: 12,
+  },
+  dayOffBox: {
+    background: "#f0f9ff",
+    border: "1px solid #7dd3fc",
+    borderRadius: 20,
+    padding: 14,
+    marginBottom: 16,
+  },
+  requestRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 10,
+    alignItems: "center",
+    borderTop: "1px solid #bae6fd",
+    paddingTop: 10,
+    marginTop: 10,
+    flexWrap: "wrap",
+  },
+  requestButtons: {
+    display: "flex",
+    gap: 8,
+  },
   buildingList: {
     display: "grid",
     gap: 12,
     marginTop: 16,
   },
   buildingCard: {
-    background: "#fafaf9",
-    border: "1px solid #d6d3d1",
+    background: "#fffaf5",
+    border: "1px solid #fed7aa",
     borderRadius: 18,
     padding: 14,
     display: "flex",
