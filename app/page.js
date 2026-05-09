@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-const SAVE_KEY = "fleetfix-tycoon-save-v6";
+const SAVE_KEY = "fleetfix-tycoon-save-v7";
 
 const STARTING_GAME = {
   started: false,
@@ -29,12 +29,12 @@ const STARTING_GAME = {
     "Parts Store": 1,
   },
   parts: {
-    Tyre: 5,
-    Battery: 4,
-    "Engine Oil": 4,
-    "Brake Kit": 3,
-    "Diagnostic Chip": 2,
-    "Tow Hook": 2,
+    Tyre: 8,
+    Battery: 6,
+    "Engine Oil": 6,
+    "Brake Kit": 5,
+    "Diagnostic Chip": 4,
+    "Tow Hook": 3,
   },
 };
 
@@ -54,12 +54,12 @@ const TECHNICIAN_NAMES = [
 ];
 
 const PARTS = [
-  { name: "Tyre", icon: "🛞", cost: 70, reorder: 5 },
-  { name: "Battery", icon: "🔋", cost: 110, reorder: 4 },
-  { name: "Engine Oil", icon: "🛢️", cost: 90, reorder: 5 },
-  { name: "Brake Kit", icon: "🧱", cost: 130, reorder: 3 },
-  { name: "Diagnostic Chip", icon: "💾", cost: 160, reorder: 3 },
-  { name: "Tow Hook", icon: "🪝", cost: 200, reorder: 2 },
+  { name: "Tyre", icon: "🛞", cost: 70, reorder: 8 },
+  { name: "Battery", icon: "🔋", cost: 110, reorder: 6 },
+  { name: "Engine Oil", icon: "🛢️", cost: 90, reorder: 6 },
+  { name: "Brake Kit", icon: "🧱", cost: 130, reorder: 5 },
+  { name: "Diagnostic Chip", icon: "💾", cost: 160, reorder: 4 },
+  { name: "Tow Hook", icon: "🪝", cost: 200, reorder: 3 },
 ];
 
 const SERVICE_CALLS = [
@@ -71,13 +71,14 @@ const SERVICE_CALLS = [
     skill: "Tyre",
     partNeeded: "Tyre",
     partQty: 1,
-    travelTime: 8,
-    repairTime: 18,
-    returnTime: 7,
-    rewardCoins: 130,
-    rewardXp: 30,
+    actualTravelMinutes: 10,
+    actualRepairMinutes: 30,
+    actualReturnMinutes: 10,
+    rewardCoins: 140,
+    rewardXp: 40,
+    techXp: 45,
     reputation: 1,
-    difficulty: 1,
+    unlockLevel: 1,
     urgency: "Low",
     icon: "🚗",
     mapPoint: "Town Road",
@@ -90,13 +91,14 @@ const SERVICE_CALLS = [
     skill: "Electrical",
     partNeeded: "Battery",
     partQty: 1,
-    travelTime: 10,
-    repairTime: 25,
-    returnTime: 9,
-    rewardCoins: 190,
-    rewardXp: 45,
+    actualTravelMinutes: 15,
+    actualRepairMinutes: 45,
+    actualReturnMinutes: 15,
+    rewardCoins: 220,
+    rewardXp: 60,
+    techXp: 70,
     reputation: 2,
-    difficulty: 1,
+    unlockLevel: 2,
     urgency: "Medium",
     icon: "🚐",
     mapPoint: "Market Road",
@@ -109,13 +111,14 @@ const SERVICE_CALLS = [
     skill: "Engine",
     partNeeded: "Engine Oil",
     partQty: 1,
-    travelTime: 12,
-    repairTime: 35,
-    returnTime: 10,
-    rewardCoins: 260,
-    rewardXp: 60,
+    actualTravelMinutes: 20,
+    actualRepairMinutes: 60,
+    actualReturnMinutes: 20,
+    rewardCoins: 330,
+    rewardXp: 85,
+    techXp: 90,
     reputation: 3,
-    difficulty: 2,
+    unlockLevel: 3,
     urgency: "Medium",
     icon: "🛻",
     mapPoint: "Highway",
@@ -128,13 +131,14 @@ const SERVICE_CALLS = [
     skill: "Mechanical",
     partNeeded: "Brake Kit",
     partQty: 1,
-    travelTime: 14,
-    repairTime: 45,
-    returnTime: 12,
-    rewardCoins: 340,
-    rewardXp: 80,
-    reputation: 4,
-    difficulty: 3,
+    actualTravelMinutes: 25,
+    actualRepairMinutes: 90,
+    actualReturnMinutes: 25,
+    rewardCoins: 470,
+    rewardXp: 120,
+    techXp: 130,
+    reputation: 5,
+    unlockLevel: 5,
     urgency: "High",
     icon: "🚛",
     mapPoint: "Transport Yard",
@@ -143,36 +147,58 @@ const SERVICE_CALLS = [
     id: 5,
     title: "Bus Safety Inspection",
     vehicle: "Bus",
-    problem: "Passenger bus needs safety check",
+    problem: "Passenger bus needs emergency safety check",
     skill: "Diagnostic",
     partNeeded: "Diagnostic Chip",
     partQty: 1,
-    travelTime: 16,
-    repairTime: 55,
-    returnTime: 13,
-    rewardCoins: 470,
-    rewardXp: 120,
-    reputation: 6,
-    difficulty: 4,
+    actualTravelMinutes: 30,
+    actualRepairMinutes: 120,
+    actualReturnMinutes: 30,
+    rewardCoins: 650,
+    rewardXp: 170,
+    techXp: 180,
+    reputation: 8,
+    unlockLevel: 7,
     urgency: "High",
     icon: "🚌",
     mapPoint: "Bus Stand",
   },
   {
     id: 6,
+    title: "Truck Fuel Leak",
+    vehicle: "Heavy Truck",
+    problem: "Fuel leakage detected at transport yard",
+    skill: "Mechanical",
+    partNeeded: "Brake Kit",
+    partQty: 2,
+    actualTravelMinutes: 35,
+    actualRepairMinutes: 150,
+    actualReturnMinutes: 35,
+    rewardCoins: 880,
+    rewardXp: 230,
+    techXp: 240,
+    reputation: 12,
+    unlockLevel: 9,
+    urgency: "Critical",
+    icon: "🚚",
+    mapPoint: "Fuel Yard",
+  },
+  {
+    id: 7,
     title: "Broken Trailer Rescue",
     vehicle: "Broken Trailer",
     problem: "Trailer stuck outside city border",
     skill: "Towing",
     partNeeded: "Tow Hook",
     partQty: 1,
-    travelTime: 20,
-    repairTime: 70,
-    returnTime: 18,
-    rewardCoins: 760,
-    rewardXp: 190,
-    reputation: 10,
-    difficulty: 6,
+    actualTravelMinutes: 45,
+    actualRepairMinutes: 180,
+    actualReturnMinutes: 45,
+    rewardCoins: 1150,
+    rewardXp: 300,
+    techXp: 310,
+    reputation: 18,
+    unlockLevel: 12,
     urgency: "Critical",
     icon: "🪝",
     mapPoint: "Outer Road",
@@ -183,28 +209,28 @@ const BUILDINGS = [
   {
     name: "Tow Yard",
     cost: 1400,
-    unlockLevel: 3,
+    unlockLevel: 6,
     icon: "🚚",
     description: "Unlocks advanced rescue and towing jobs.",
   },
   {
     name: "Training Center",
     cost: 2200,
-    unlockLevel: 5,
+    unlockLevel: 8,
     icon: "🎓",
     description: "Improves technician growth and skill quality.",
   },
   {
     name: "Fuel Station",
     cost: 3000,
-    unlockLevel: 7,
+    unlockLevel: 10,
     icon: "⛽",
     description: "Raises town value and service capacity.",
   },
   {
     name: "Dispatch Office",
     cost: 4200,
-    unlockLevel: 10,
+    unlockLevel: 14,
     icon: "📡",
     description: "Prepares your company for multi-city work.",
   },
@@ -223,8 +249,16 @@ function createId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
+function getGameSeconds(actualMinutes) {
+  return Math.max(5, Math.ceil(actualMinutes * 10));
+}
+
 function getXpNeeded(level) {
-  return level * 150;
+  return level * 180;
+}
+
+function getTechnicianXpNeeded(level) {
+  return level * 120;
 }
 
 function getSalaryForLevel(level, isOwner) {
@@ -239,6 +273,17 @@ function getSalaryForLevel(level, isOwner) {
   return Math.round(baseSalary * Math.pow(1.015, level - 5));
 }
 
+function getBasicPickupEquipment() {
+  return {
+    Tyre: 2,
+    Battery: 1,
+    "Engine Oil": 1,
+    "Brake Kit": 1,
+    "Diagnostic Chip": 1,
+    "Tow Hook": 1,
+  };
+}
+
 function createTechnician(name, isOwner = false) {
   const level = 1;
 
@@ -247,6 +292,7 @@ function createTechnician(name, isOwner = false) {
     name,
     skill: isOwner ? "All-Rounder" : SKILLS[Math.floor(Math.random() * SKILLS.length)],
     level,
+    xp: 0,
     energy: 100,
     morale: 100,
     status: "Free",
@@ -255,6 +301,7 @@ function createTechnician(name, isOwner = false) {
     salary: getSalaryForLevel(level, isOwner),
     daysOffTaken: 0,
     avatar: isOwner ? "👑" : ["👨‍🔧", "👩‍🔧", "🧰", "🔧"][Math.floor(Math.random() * 4)],
+    pickupEquipment: getBasicPickupEquipment(),
   };
 }
 
@@ -264,22 +311,31 @@ function normalizeTechnician(tech) {
   return {
     ...tech,
     level,
+    xp: tech.xp || 0,
     morale: tech.morale ?? 100,
     salary: getSalaryForLevel(level, tech.isOwner),
     daysOffTaken: tech.daysOffTaken ?? 0,
     avatar: tech.avatar || (tech.isOwner ? "👑" : "👨‍🔧"),
+    pickupEquipment: {
+      ...getBasicPickupEquipment(),
+      ...(tech.pickupEquipment || {}),
+    },
   };
 }
 
 function getRandomServiceCalls(level) {
-  const available = SERVICE_CALLS.filter((call) => call.difficulty <= level + 1);
+  const available = SERVICE_CALLS.filter((call) => call.unlockLevel <= level);
   return [...available].sort(() => Math.random() - 0.5).slice(0, 4);
 }
 
+function getLockedServiceCalls(level) {
+  return SERVICE_CALLS.filter((call) => call.unlockLevel > level).slice(0, 3);
+}
+
 function getCompanyRank(rep) {
-  if (rep >= 100) return "Regional Fleet Leader";
-  if (rep >= 40) return "Trusted Fleet Partner";
-  if (rep >= 12) return "Growing Garage";
+  if (rep >= 150) return "Regional Fleet Leader";
+  if (rep >= 65) return "Trusted Fleet Partner";
+  if (rep >= 18) return "Growing Garage";
   return "Small Town Garage";
 }
 
@@ -291,6 +347,10 @@ function getUrgencyStyle(urgency) {
 }
 
 function getJobPhaseLabel(job) {
+  if (job.needsSupport && !job.supportAssigned) return "Paused: extra issue found";
+  if (job.needsSupport && job.supportAssigned && job.supportRemaining > 0) {
+    return "Backup resolving extra issue";
+  }
   if (job.phase === "travel") return "Travelling to job";
   if (job.phase === "repair") return "Repairing vehicle";
   if (job.phase === "return") return "Returning to garage";
@@ -307,6 +367,13 @@ function getVehiclePosition(job) {
   if (job.phase === "return") return 65 - progress * 55;
 
   return 10;
+}
+
+function formatEta(seconds) {
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}m ${s}s`;
 }
 
 export default function Home() {
@@ -326,6 +393,7 @@ export default function Home() {
   useEffect(() => {
     const saved =
       localStorage.getItem(SAVE_KEY) ||
+      localStorage.getItem("fleetfix-tycoon-save-v6") ||
       localStorage.getItem("fleetfix-tycoon-save-v5") ||
       localStorage.getItem("fleetfix-tycoon-save-v4") ||
       localStorage.getItem("fleetfix-tycoon-save-v3") ||
@@ -351,7 +419,7 @@ export default function Home() {
           ...(parsed.parts || {}),
         },
         technicians: (parsed.technicians || []).map(normalizeTechnician),
-        activeJobs: parsed.activeJobs || [],
+        activeJobs: [],
         dayOffRequests: parsed.dayOffRequests || [],
       });
 
@@ -416,20 +484,70 @@ export default function Home() {
         if (updated.activeJobs.length > 0) {
           updated.activeJobs = updated.activeJobs
             .map((job) => {
-              let nextJob = {
-                ...job,
-                phaseRemaining: job.phaseRemaining - 1,
-              };
+              let nextJob = { ...job };
+
+              const issueChance =
+                job.urgency === "Critical" ? 0.035 :
+                job.urgency === "High" ? 0.022 :
+                0.01;
+
+              if (
+                job.phase === "repair" &&
+                !job.extraIssueChecked &&
+                !job.needsSupport &&
+                Math.random() < issueChance
+              ) {
+                return {
+                  ...nextJob,
+                  extraIssueChecked: true,
+                  needsSupport: true,
+                  supportAssigned: false,
+                  issueText:
+                    job.urgency === "Critical"
+                      ? "Major hidden fault discovered. Backup technician required."
+                      : "Additional small issue found. Backup can speed up resolution.",
+                };
+              }
+
+              if (job.needsSupport && !job.supportAssigned) {
+                return nextJob;
+              }
+
+              if (job.needsSupport && job.supportAssigned && job.supportRemaining > 0) {
+                return {
+                  ...nextJob,
+                  supportRemaining: job.supportRemaining - 1,
+                };
+              }
+
+              if (job.needsSupport && job.supportAssigned && job.supportRemaining <= 0) {
+                nextJob.needsSupport = false;
+                nextJob.supportResolved = true;
+              }
+
+              nextJob.phaseRemaining = nextJob.phaseRemaining - 1;
 
               if (nextJob.phaseRemaining <= 0) {
                 if (nextJob.phase === "travel") {
                   nextJob.phase = "repair";
                   nextJob.phaseRemaining = nextJob.repairTimeFinal;
                   nextJob.phaseTotal = nextJob.repairTimeFinal;
+
+                  updated.technicians = updated.technicians.map((tech) =>
+                    tech.id === nextJob.technicianId
+                      ? { ...tech, status: "Repairing" }
+                      : tech
+                  );
                 } else if (nextJob.phase === "repair") {
                   nextJob.phase = "return";
                   nextJob.phaseRemaining = nextJob.returnTime;
                   nextJob.phaseTotal = nextJob.returnTime;
+
+                  updated.technicians = updated.technicians.map((tech) =>
+                    tech.id === nextJob.technicianId
+                      ? { ...tech, status: "Returning" }
+                      : tech
+                  );
                 } else if (nextJob.phase === "return") {
                   nextJob.completed = true;
                 }
@@ -444,6 +562,10 @@ export default function Home() {
                 (tech) => tech.id === job.technicianId
               );
 
+              const supportTech = updated.technicians.find(
+                (tech) => tech.id === job.supportTechnicianId
+              );
+
               updated.coins += job.rewardCoins;
               updated.xp += job.rewardXp;
               updated.reputation += job.reputation;
@@ -452,41 +574,76 @@ export default function Home() {
               updated.townValue += Math.floor(job.rewardCoins * 0.12);
 
               updated.technicians = updated.technicians.map((tech) => {
-                if (tech.id !== job.technicianId) return tech;
+                if (tech.id === job.technicianId) {
+                  const newEnergy = Math.max(0, tech.energy - 14);
+                  let newLevel = tech.level || 1;
+                  let newXp = (tech.xp || 0) + job.techXp;
 
-                const newEnergy = Math.max(0, tech.energy - 14);
-                const newLevel = tech.level + 1;
+                  while (newXp >= getTechnicianXpNeeded(newLevel)) {
+                    newXp -= getTechnicianXpNeeded(newLevel);
+                    newLevel += 1;
+                  }
 
-                if (
-                  newEnergy <= 35 &&
-                  !tech.isOwner &&
-                  !updated.dayOffRequests.some((req) => req.technicianId === tech.id)
-                ) {
-                  updated.dayOffRequests = [
-                    ...updated.dayOffRequests,
-                    {
-                      id: createId(),
-                      technicianId: tech.id,
-                      technicianName: tech.name,
-                      reason: "Low energy after repeated repair work.",
-                    },
-                  ];
+                  if (
+                    newEnergy <= 35 &&
+                    !tech.isOwner &&
+                    !updated.dayOffRequests.some((req) => req.technicianId === tech.id)
+                  ) {
+                    updated.dayOffRequests = [
+                      ...updated.dayOffRequests,
+                      {
+                        id: createId(),
+                        technicianId: tech.id,
+                        technicianName: tech.name,
+                        reason: "Low energy after repeated repair work.",
+                      },
+                    ];
+                  }
+
+                  return {
+                    ...tech,
+                    status: "Free",
+                    currentJobId: null,
+                    energy: newEnergy,
+                    morale: Math.max(45, tech.morale - 2),
+                    xp: newXp,
+                    level: newLevel,
+                    salary: getSalaryForLevel(newLevel, tech.isOwner),
+                  };
                 }
 
-                return {
-                  ...tech,
-                  status: "Free",
-                  currentJobId: null,
-                  energy: newEnergy,
-                  morale: Math.max(45, tech.morale - 2),
-                  level: newLevel,
-                  salary: getSalaryForLevel(newLevel, tech.isOwner),
-                };
+                if (tech.id === job.supportTechnicianId) {
+                  const supportXp = 35;
+                  let newLevel = tech.level || 1;
+                  let newXp = (tech.xp || 0) + supportXp;
+
+                  while (newXp >= getTechnicianXpNeeded(newLevel)) {
+                    newXp -= getTechnicianXpNeeded(newLevel);
+                    newLevel += 1;
+                  }
+
+                  return {
+                    ...tech,
+                    status: "Free",
+                    currentJobId: null,
+                    energy: Math.max(0, tech.energy - 6),
+                    morale: Math.max(45, tech.morale - 1),
+                    xp: newXp,
+                    level: newLevel,
+                    salary: getSalaryForLevel(newLevel, tech.isOwner),
+                  };
+                }
+
+                return tech;
               });
 
               notes.push(
-                `${technician?.name || "Technician"} returned from ${job.title}. Earned ${job.rewardCoins} coins and ${job.rewardXp} XP.`
+                `${technician?.name || "Technician"} returned from ${job.title}. Earned ${job.rewardCoins} coins, ${job.rewardXp} company XP, and ${job.techXp} technician XP.`
               );
+
+              if (supportTech) {
+                notes.push(`${supportTech.name} helped with the extra issue and earned support XP.`);
+              }
 
               return false;
             });
@@ -496,7 +653,7 @@ export default function Home() {
           updated.xp -= getXpNeeded(updated.level);
           updated.level += 1;
           updated.coins += 250;
-          notes.push(`Level up! You reached Level ${updated.level} and earned 250 bonus coins.`);
+          notes.push(`Company level up! You reached Level ${updated.level} and earned 250 bonus coins.`);
         }
 
         if (notes.length > 0) {
@@ -523,6 +680,7 @@ export default function Home() {
   }, [game.technicians]);
 
   const companyRank = getCompanyRank(game.reputation);
+  const lockedCalls = getLockedServiceCalls(game.level);
 
   function startGame() {
     if (
@@ -556,22 +714,61 @@ export default function Home() {
     return (game.parts[call.partNeeded] || 0) >= call.partQty;
   }
 
+  function ensurePickupEquipment(tech, call) {
+    const pickupStock = tech.pickupEquipment?.[call.partNeeded] || 0;
+
+    if (pickupStock >= call.partQty) {
+      return {
+        ok: true,
+        updatedParts: { ...game.parts },
+        loadedMessage: "Pickup equipment used.",
+      };
+    }
+
+    const missing = call.partQty - pickupStock;
+    const shopStock = game.parts[call.partNeeded] || 0;
+
+    if (shopStock < missing) {
+      return {
+        ok: false,
+        updatedParts: { ...game.parts },
+        loadedMessage: `Not enough ${call.partNeeded} in Parts Store or pickup.`,
+      };
+    }
+
+    return {
+      ok: true,
+      updatedParts: {
+        ...game.parts,
+        [call.partNeeded]: shopStock - missing,
+      },
+      loadedMessage: `Loaded ${missing} ${call.partNeeded} from Parts Store into pickup.`,
+    };
+  }
+
   function dispatchTechnician(call, technicianId) {
     const tech = game.technicians.find((item) => item.id === technicianId);
 
     if (!tech) return;
 
-    if (!hasEnoughParts(call)) {
-      setMessage(`Not enough ${call.partNeeded}. Open Parts tab and restock.`);
+    const equipmentCheck = ensurePickupEquipment(tech, call);
+
+    if (!equipmentCheck.ok) {
+      setMessage(equipmentCheck.loadedMessage);
       setActiveTab("parts");
       return;
     }
 
     const skillMatch = tech.skill === call.skill || tech.skill === "All-Rounder";
     const moraleBonus = tech.morale >= 80 ? 0.9 : 1;
+
+    const travelTime = getGameSeconds(call.actualTravelMinutes);
+    const repairTimeBase = getGameSeconds(call.actualRepairMinutes);
+    const returnTime = getGameSeconds(call.actualReturnMinutes);
+
     const repairTimeFinal = skillMatch
-      ? Math.max(8, Math.floor(call.repairTime * 0.7 * moraleBonus))
-      : Math.max(8, Math.floor(call.repairTime * moraleBonus));
+      ? Math.max(8, Math.floor(repairTimeBase * 0.7 * moraleBonus))
+      : Math.max(8, Math.floor(repairTimeBase * moraleBonus));
 
     const activeJob = {
       ...call,
@@ -579,31 +776,88 @@ export default function Home() {
       technicianId: tech.id,
       technicianName: tech.name,
       phase: "travel",
-      phaseRemaining: call.travelTime,
-      phaseTotal: call.travelTime,
+      phaseRemaining: travelTime,
+      phaseTotal: travelTime,
+      travelTime,
       repairTimeFinal,
+      returnTime,
       skillMatch,
+      extraIssueChecked: false,
+      needsSupport: false,
+      supportAssigned: false,
+      supportRemaining: 0,
     };
 
     setGame((current) => ({
       ...current,
-      parts: {
-        ...current.parts,
-        [call.partNeeded]: (current.parts[call.partNeeded] || 0) - call.partQty,
-      },
+      parts: equipmentCheck.updatedParts,
       activeJobs: [...current.activeJobs, activeJob],
-      technicians: current.technicians.map((item) =>
-        item.id === tech.id
-          ? { ...item, status: "Travelling", currentJobId: activeJob.jobId }
-          : item
-      ),
+      technicians: current.technicians.map((item) => {
+        if (item.id !== tech.id) return item;
+
+        const currentPickupStock = item.pickupEquipment?.[call.partNeeded] || 0;
+        const updatedPickupStock =
+          currentPickupStock >= call.partQty
+            ? currentPickupStock - call.partQty
+            : 0;
+
+        return {
+          ...item,
+          status: "Travelling",
+          currentJobId: activeJob.jobId,
+          pickupEquipment: {
+            ...item.pickupEquipment,
+            [call.partNeeded]: updatedPickupStock,
+          },
+        };
+      }),
     }));
 
     setAvailableCalls((calls) => calls.filter((item) => item.id !== call.id));
     setActiveTab("jobs");
     setMessage(
-      `${tech.name} is travelling to ${call.mapPoint}. ETA ${call.travelTime}s. Parts used: ${call.partQty} ${call.partNeeded}.`
+      `${tech.name} is travelling to ${call.mapPoint}. ETA ${formatEta(travelTime)}. ${equipmentCheck.loadedMessage}`
     );
+  }
+
+  function sendBackup(jobId, technicianId) {
+    const backupTech = game.technicians.find((tech) => tech.id === technicianId);
+    const job = game.activeJobs.find((item) => item.jobId === jobId);
+
+    if (!backupTech || !job) return;
+
+    if (backupTech.id === job.technicianId) {
+      setMessage("Main technician is already working on this job.");
+      return;
+    }
+
+    const supportTime = job.urgency === "Critical" ? 90 : 45;
+
+    setGame((current) => ({
+      ...current,
+      activeJobs: current.activeJobs.map((item) =>
+        item.jobId === jobId
+          ? {
+              ...item,
+              supportAssigned: true,
+              supportTechnicianId: backupTech.id,
+              supportTechnicianName: backupTech.name,
+              supportRemaining: supportTime,
+            }
+          : item
+      ),
+      technicians: current.technicians.map((tech) =>
+        tech.id === backupTech.id
+          ? {
+              ...tech,
+              status: "Supporting",
+              currentJobId: jobId,
+            }
+          : tech
+      ),
+    }));
+
+    setMessage(`${backupTech.name} is going as backup. Extra issue ETA: ${formatEta(supportTime)}.`);
   }
 
   function refreshCalls() {
@@ -663,7 +917,53 @@ export default function Home() {
     setMessage(`Parts Store auto-restocked low parts for ${totalCost} coins.`);
   }
 
+  function loadPickupEquipment(technicianId) {
+    const tech = game.technicians.find((item) => item.id === technicianId);
+    if (!tech) return;
+
+    let totalCost = 0;
+    const newParts = { ...game.parts };
+    const targetEquipment = getBasicPickupEquipment();
+    const newEquipment = { ...(tech.pickupEquipment || {}) };
+
+    PARTS.forEach((part) => {
+      const target = targetEquipment[part.name] || 0;
+      const current = newEquipment[part.name] || 0;
+
+      if (current < target) {
+        const needed = target - current;
+        const available = newParts[part.name] || 0;
+        const loading = Math.min(needed, available);
+
+        if (loading > 0) {
+          newParts[part.name] -= loading;
+          newEquipment[part.name] = current + loading;
+        }
+      }
+    });
+
+    setGame((current) => ({
+      ...current,
+      parts: newParts,
+      technicians: current.technicians.map((item) =>
+        item.id === technicianId
+          ? {
+              ...item,
+              pickupEquipment: newEquipment,
+            }
+          : item
+      ),
+    }));
+
+    setMessage(`${tech.name}'s pickup equipment was loaded from the Parts Store.`);
+  }
+
   function hireTechnician() {
+    if (game.level < 5) {
+      setMessage("First additional technician unlocks at Company Level 5.");
+      return;
+    }
+
     const cost = 700 + game.technicians.length * 350;
 
     if (game.coins < cost) {
@@ -789,7 +1089,7 @@ export default function Home() {
 
   function buyBuilding(building) {
     if (game.level < building.unlockLevel) {
-      setMessage(`${building.name} unlocks at Level ${building.unlockLevel}.`);
+      setMessage(`${building.name} unlocks at Company Level ${building.unlockLevel}.`);
       return;
     }
 
@@ -842,6 +1142,7 @@ export default function Home() {
 
   function resetGame() {
     localStorage.removeItem(SAVE_KEY);
+    localStorage.removeItem("fleetfix-tycoon-save-v6");
     localStorage.removeItem("fleetfix-tycoon-save-v5");
     localStorage.removeItem("fleetfix-tycoon-save-v4");
     localStorage.removeItem("fleetfix-tycoon-save-v3");
@@ -921,8 +1222,8 @@ export default function Home() {
 
         <div style={styles.statsGrid}>
           <Stat label="Coins" value={`🪙 ${game.coins}`} />
-          <Stat label="XP" value={`${game.xp}/${getXpNeeded(game.level)}`} />
-          <Stat label="Level" value={game.level} />
+          <Stat label="Company XP" value={`${game.xp}/${getXpNeeded(game.level)}`} />
+          <Stat label="Company Level" value={game.level} />
           <Stat label="Rep" value={`⭐ ${game.reputation}`} />
           <Stat label="Day" value={`${game.day} / ${game.dayTimer}s`} />
           <Stat label="Salary Due" value={`🧾 ${game.salaryDue}`} />
@@ -951,7 +1252,7 @@ export default function Home() {
               <div>
                 <h2 style={styles.sectionTitle}>🏙️ {game.townName} Service Town</h2>
                 <p style={styles.smallText}>
-                  Improved 2.5D map with moving job vehicles. True 3D walking will need Unity or Three.js next.
+                  Company levels unlock technicians, jobs, buildings, and bigger contracts.
                 </p>
               </div>
               <button style={styles.dangerButton} onClick={resetGame}>
@@ -963,7 +1264,17 @@ export default function Home() {
               <MiniStat title="Company Rank" value={companyRank} />
               <MiniStat title="Town Value" value={`🏙️ ${game.townValue}`} />
               <MiniStat title="Daily Salary" value={`🧾 ${totalDailySalary}`} />
-              <MiniStat title="Parts Store" value="Owned" />
+              <MiniStat title="Next Hire" value={game.level >= 5 ? "Unlocked" : "Level 5"} />
+            </div>
+
+            <div style={styles.unlockBox}>
+              <b>Unlock System:</b>
+              <p>Level 1: Basic roadside calls</p>
+              <p>Level 5: Hire first additional technician + trailer jobs</p>
+              <p>Level 6+: Tow Yard building</p>
+              <p>Level 7+: Bus and inspection jobs</p>
+              <p>Level 9+: Critical heavy truck jobs</p>
+              <p>Level 12+: Broken trailer rescue jobs</p>
             </div>
 
             <div style={styles.gameMap}>
@@ -989,14 +1300,14 @@ export default function Home() {
                     top: `${58 + index * 7}%`,
                   }}
                 >
-                  <div style={styles.vehicleBubble}>{job.icon}</div>
+                  <PickupTruck />
                   <div style={styles.vehicleLabel}>{job.technicianName}</div>
                 </div>
               ))}
 
               {game.activeJobs.length === 0 && (
                 <div style={styles.mapHint}>
-                  Dispatch a technician to see vehicle movement and ETA.
+                  Dispatch a technician to see the red-white pickup moving.
                 </div>
               )}
             </div>
@@ -1009,7 +1320,7 @@ export default function Home() {
               <div>
                 <h2 style={styles.sectionTitle}>🚨 Service Calls</h2>
                 <p style={styles.smallText}>
-                  Calls need parts from your self-owned Parts Store.
+                  Realistic time compression: 1 real hour becomes 10 game minutes.
                 </p>
               </div>
 
@@ -1019,52 +1330,74 @@ export default function Home() {
             </div>
 
             <div style={styles.cardsGrid}>
-              {availableCalls.map((call) => (
-                <div key={call.id} style={styles.callCard}>
-                  <div style={styles.callTop}>
-                    <div style={styles.cardIcon}>{call.icon}</div>
-                    <span style={{ ...styles.urgencyBadge, ...getUrgencyStyle(call.urgency) }}>
-                      {call.urgency}
-                    </span>
-                  </div>
+              {availableCalls.map((call) => {
+                const travel = getGameSeconds(call.actualTravelMinutes);
+                const repair = getGameSeconds(call.actualRepairMinutes);
+                const back = getGameSeconds(call.actualReturnMinutes);
 
-                  <h3 style={styles.cardTitle}>{call.title}</h3>
-                  <p style={styles.smallText}>{call.problem}</p>
+                return (
+                  <div key={call.id} style={styles.callCard}>
+                    <div style={styles.callTop}>
+                      <div style={styles.cardIcon}>{call.icon}</div>
+                      <span style={{ ...styles.urgencyBadge, ...getUrgencyStyle(call.urgency) }}>
+                        {call.urgency}
+                      </span>
+                    </div>
 
-                  <div style={styles.infoList}>
-                    <p><b>Location:</b> {call.mapPoint}</p>
-                    <p><b>Skill:</b> {call.skill}</p>
-                    <p>
-                      <b>Parts:</b> {call.partQty} {call.partNeeded}{" "}
-                      {hasEnoughParts(call) ? "✅" : "❌"}
-                    </p>
-                    <p>
-                      <b>ETA:</b> Go {call.travelTime}s • Repair {call.repairTime}s • Return {call.returnTime}s
-                    </p>
-                    <p><b>Reward:</b> 🪙 {call.rewardCoins} • XP {call.rewardXp}</p>
-                  </div>
+                    <h3 style={styles.cardTitle}>{call.title}</h3>
+                    <p style={styles.smallText}>{call.problem}</p>
 
-                  <div style={styles.buttonStack}>
-                    {freeTechnicians.length === 0 ? (
-                      <div style={styles.warningBox}>No free technicians.</div>
-                    ) : (
-                      freeTechnicians.map((tech) => {
-                        const match = tech.skill === call.skill || tech.skill === "All-Rounder";
-                        return (
-                          <button
-                            key={tech.id}
-                            style={match ? styles.greenSmallButton : styles.orangeSmallButton}
-                            onClick={() => dispatchTechnician(call, tech.id)}
-                          >
-                            Send {tech.name} {match ? "⚡" : ""}
-                          </button>
-                        );
-                      })
-                    )}
+                    <div style={styles.infoList}>
+                      <p><b>Unlock Level:</b> {call.unlockLevel}</p>
+                      <p><b>Location:</b> {call.mapPoint}</p>
+                      <p><b>Skill:</b> {call.skill}</p>
+                      <p><b>Parts:</b> {call.partQty} {call.partNeeded}</p>
+                      <p>
+                        <b>Game ETA:</b> Go {formatEta(travel)} • Repair {formatEta(repair)} • Return {formatEta(back)}
+                      </p>
+                      <p>
+                        <b>Realistic Time:</b> {call.actualTravelMinutes + call.actualRepairMinutes + call.actualReturnMinutes} real min compressed
+                      </p>
+                      <p><b>Reward:</b> 🪙 {call.rewardCoins} • Company XP {call.rewardXp} • Tech XP {call.techXp}</p>
+                    </div>
+
+                    <div style={styles.buttonStack}>
+                      {freeTechnicians.length === 0 ? (
+                        <div style={styles.warningBox}>No free technicians.</div>
+                      ) : (
+                        freeTechnicians.map((tech) => {
+                          const match = tech.skill === call.skill || tech.skill === "All-Rounder";
+                          return (
+                            <button
+                              key={tech.id}
+                              style={match ? styles.greenSmallButton : styles.orangeSmallButton}
+                              onClick={() => dispatchTechnician(call, tech.id)}
+                            >
+                              Send {tech.name} {match ? "⚡" : ""}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
+
+            {lockedCalls.length > 0 && (
+              <>
+                <h3 style={styles.subTitle}>🔒 Locked Future Jobs</h3>
+                <div style={styles.cardsGrid}>
+                  {lockedCalls.map((call) => (
+                    <div key={call.id} style={styles.lockedCallCard}>
+                      <div style={styles.cardIcon}>🔒</div>
+                      <h3 style={styles.cardTitle}>{call.title}</h3>
+                      <p style={styles.smallText}>Unlocks at Company Level {call.unlockLevel}</p>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </Panel>
         )}
 
@@ -1072,7 +1405,7 @@ export default function Home() {
           <Panel>
             <h2 style={styles.sectionTitle}>⏱️ Active Jobs with ETA</h2>
             <p style={styles.smallText}>
-              Every job includes travelling, repair time, and return to garage.
+              Jobs include travelling, repair time, return, and possible extra issues.
             </p>
 
             <div style={styles.cardsGrid}>
@@ -1083,8 +1416,12 @@ export default function Home() {
                   const progress =
                     ((job.phaseTotal - job.phaseRemaining) / job.phaseTotal) * 100;
 
+                  const backupOptions = freeTechnicians.filter(
+                    (tech) => tech.id !== job.technicianId
+                  );
+
                   return (
-                    <div key={job.jobId} style={styles.jobCard}>
+                    <div key={job.jobId} style={job.needsSupport ? styles.issueJobCard : styles.jobCard}>
                       <div style={styles.jobTop}>
                         <div>
                           <h3 style={styles.cardTitle}>{job.icon} {job.title}</h3>
@@ -1092,14 +1429,46 @@ export default function Home() {
                           <p style={styles.smallText}>Location: {job.mapPoint}</p>
                           <p style={styles.phaseText}>{getJobPhaseLabel(job)}</p>
                           {job.skillMatch && <p style={styles.bonusText}>⚡ Skill match bonus</p>}
+                          {job.needsSupport && (
+                            <div style={styles.warningBox}>
+                              {job.issueText}
+                            </div>
+                          )}
+                          {job.supportAssigned && (
+                            <p style={styles.bonusText}>
+                              Backup: {job.supportTechnicianName} • Extra ETA {formatEta(job.supportRemaining)}
+                            </p>
+                          )}
                         </div>
 
-                        <span style={styles.timerBadge}>{job.phaseRemaining}s</span>
+                        <span style={styles.timerBadge}>
+                          {job.needsSupport && !job.supportAssigned
+                            ? "Paused"
+                            : formatEta(job.phaseRemaining)}
+                        </span>
                       </div>
 
                       <div style={styles.progressOuter}>
                         <div style={{ ...styles.progressInner, width: `${progress}%` }} />
                       </div>
+
+                      {job.needsSupport && !job.supportAssigned && (
+                        <div style={styles.buttonStack}>
+                          {backupOptions.length === 0 ? (
+                            <div style={styles.warningBox}>No free backup technician available.</div>
+                          ) : (
+                            backupOptions.map((tech) => (
+                              <button
+                                key={tech.id}
+                                style={styles.greenSmallButton}
+                                onClick={() => sendBackup(job.jobId, tech.id)}
+                              >
+                                Send {tech.name} as Backup
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })
@@ -1114,7 +1483,7 @@ export default function Home() {
               <div>
                 <h2 style={styles.sectionTitle}>👨‍🔧 Technician Team</h2>
                 <p style={styles.smallText}>
-                  New technician salary is 100 coins/day. After Level 5, salary increases by 1.5% per level.
+                  First additional technician unlocks at Company Level 5. Technicians earn XP from jobs.
                 </p>
               </div>
 
@@ -1161,12 +1530,26 @@ export default function Home() {
                   </div>
 
                   <p style={styles.smallText}>Skill: {tech.skill}</p>
-                  <p style={styles.smallText}>Level: {tech.level}</p>
+                  <p style={styles.smallText}>
+                    Tech Level: {tech.level} • XP {tech.xp || 0}/{getTechnicianXpNeeded(tech.level || 1)}
+                  </p>
                   <p style={styles.smallText}>Salary/day: 🧾 {getSalaryForLevel(tech.level || 1, tech.isOwner)}</p>
                   <p style={styles.smallText}>Days off: {tech.daysOffTaken}</p>
 
                   <Bar label="Energy" value={tech.energy} color="#16a34a" />
                   <Bar label="Morale" value={tech.morale} color="#2563eb" />
+
+                  <div style={styles.pickupBox}>
+                    <b>Pickup Equipment</b>
+                    {PARTS.map((part) => (
+                      <span key={part.name}>
+                        {part.icon} {part.name}: {tech.pickupEquipment?.[part.name] || 0}
+                      </span>
+                    ))}
+                    <button style={styles.lightSmallButton} onClick={() => loadPickupEquipment(tech.id)}>
+                      Load Pickup from Parts Store
+                    </button>
+                  </div>
 
                   {renameId === tech.id ? (
                     <div style={styles.renameBox}>
@@ -1189,8 +1572,10 @@ export default function Home() {
             </div>
 
             <div style={styles.actionRow}>
-              <button style={styles.darkFullButton} onClick={hireTechnician}>
-                Hire Technician — 🪙 {700 + game.technicians.length * 350}
+              <button style={game.level >= 5 ? styles.darkFullButton : styles.lockedFullButton} onClick={hireTechnician}>
+                {game.level >= 5
+                  ? `Hire Technician — 🪙 ${700 + game.technicians.length * 350}`
+                  : "Hire Technician Locked Until Company Level 5"}
               </button>
 
               <button style={styles.lightFullButton} onClick={restTechnicians}>
@@ -1206,7 +1591,7 @@ export default function Home() {
               <div>
                 <h2 style={styles.sectionTitle}>🏪 Parts Store Management</h2>
                 <p style={styles.smallText}>
-                  Parts Store is owned by default. Manage stock, reorder levels, and repair supplies here.
+                  Parts Store supplies your technicians’ pickups and repair jobs.
                 </p>
               </div>
 
@@ -1224,7 +1609,7 @@ export default function Home() {
                   <div key={part.name} style={low ? styles.lowPartCard : styles.partCard}>
                     <div style={styles.partIcon}>{part.icon}</div>
                     <h3 style={styles.cardTitle}>{part.name}</h3>
-                    <p style={styles.smallText}>Stock: <b>{stock}</b></p>
+                    <p style={styles.smallText}>Store Stock: <b>{stock}</b></p>
                     <p style={styles.smallText}>Reorder Level: {part.reorder}</p>
                     <p style={styles.smallText}>Cost: 🪙 {part.cost} each</p>
 
@@ -1252,7 +1637,7 @@ export default function Home() {
           <Panel>
             <h2 style={styles.sectionTitle}>🏗️ Build & Upgrade</h2>
             <p style={styles.smallText}>
-              Parts Store is already owned. Build other facilities as you level up.
+              Company levels unlock new business facilities.
             </p>
 
             <button style={styles.mainButton} onClick={upgradeGarage}>
@@ -1339,6 +1724,18 @@ function Building({ icon, title, style }) {
     <div style={{ ...styles.mapBuilding, ...style }}>
       <div style={styles.mapBuildingIcon}>{icon}</div>
       <div style={styles.mapBuildingTitle}>{title}</div>
+    </div>
+  );
+}
+
+function PickupTruck() {
+  return (
+    <div style={styles.pickupTruck}>
+      <div style={styles.pickupCab} />
+      <div style={styles.pickupBody} />
+      <div style={styles.pickupStripe} />
+      <div style={styles.pickupWheelOne} />
+      <div style={styles.pickupWheelTwo} />
     </div>
   );
 }
@@ -1434,7 +1831,7 @@ const styles = {
     gap: 8,
     minWidth: 320,
     flex: 1,
-    maxWidth: 800,
+    maxWidth: 850,
   },
   statBox: {
     background: "#fff7ed",
@@ -1506,6 +1903,7 @@ const styles = {
     flexWrap: "wrap",
   },
   sectionTitle: { margin: 0, fontSize: 24, fontWeight: 900 },
+  subTitle: { margin: "24px 0 12px", fontSize: 20, fontWeight: 900 },
   empireStats: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
@@ -1517,6 +1915,16 @@ const styles = {
     border: "1px solid #fed7aa",
     borderRadius: 16,
     padding: 12,
+  },
+  unlockBox: {
+    background: "#f0f9ff",
+    border: "1px solid #7dd3fc",
+    color: "#075985",
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 18,
+    fontSize: 14,
+    lineHeight: 1.45,
   },
   gameMap: {
     position: "relative",
@@ -1602,16 +2010,60 @@ const styles = {
     transition: "left 0.6s linear, top 0.6s linear",
     transform: "translate(-50%, -50%)",
   },
-  vehicleBubble: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    background: "#fff7ed",
-    border: "2px solid #fdba74",
-    display: "grid",
-    placeItems: "center",
-    fontSize: 30,
-    boxShadow: "0 10px 18px rgba(0,0,0,0.25)",
+  pickupTruck: {
+    position: "relative",
+    width: 76,
+    height: 38,
+    filter: "drop-shadow(0 10px 10px rgba(0,0,0,0.35))",
+  },
+  pickupCab: {
+    position: "absolute",
+    right: 12,
+    top: 4,
+    width: 30,
+    height: 20,
+    background: "#ffffff",
+    border: "3px solid #dc2626",
+    borderRadius: "10px 10px 4px 4px",
+  },
+  pickupBody: {
+    position: "absolute",
+    left: 4,
+    bottom: 6,
+    width: 68,
+    height: 20,
+    background: "#ffffff",
+    border: "3px solid #dc2626",
+    borderRadius: 8,
+  },
+  pickupStripe: {
+    position: "absolute",
+    left: 8,
+    bottom: 15,
+    width: 58,
+    height: 5,
+    background: "#dc2626",
+    borderRadius: 99,
+  },
+  pickupWheelOne: {
+    position: "absolute",
+    left: 14,
+    bottom: 0,
+    width: 14,
+    height: 14,
+    background: "#1c1917",
+    borderRadius: "50%",
+    border: "3px solid #78716c",
+  },
+  pickupWheelTwo: {
+    position: "absolute",
+    right: 14,
+    bottom: 0,
+    width: 14,
+    height: 14,
+    background: "#1c1917",
+    borderRadius: "50%",
+    border: "3px solid #78716c",
   },
   vehicleLabel: {
     marginTop: 4,
@@ -1622,6 +2074,7 @@ const styles = {
     fontSize: 11,
     fontWeight: 900,
     whiteSpace: "nowrap",
+    textAlign: "center",
   },
   mapHint: {
     position: "absolute",
@@ -1646,9 +2099,22 @@ const styles = {
     padding: 16,
     boxShadow: "0 10px 22px rgba(0,0,0,0.06)",
   },
+  lockedCallCard: {
+    background: "#f5f5f4",
+    border: "1px solid #d6d3d1",
+    borderRadius: 22,
+    padding: 16,
+    opacity: 0.8,
+  },
   jobCard: {
     background: "#fffaf5",
     border: "1px solid #fed7aa",
+    borderRadius: 22,
+    padding: 16,
+  },
+  issueJobCard: {
+    background: "#fff1f2",
+    border: "2px solid #fb7185",
     borderRadius: 22,
     padding: 16,
   },
@@ -1754,6 +2220,16 @@ const styles = {
     fontWeight: 900,
     cursor: "pointer",
   },
+  lockedFullButton: {
+    width: "100%",
+    background: "#e7e5e4",
+    color: "#78716c",
+    border: "none",
+    borderRadius: 16,
+    padding: "13px 14px",
+    fontWeight: 900,
+    cursor: "pointer",
+  },
   lightFullButton: {
     width: "100%",
     background: "white",
@@ -1830,6 +2306,16 @@ const styles = {
     padding: "5px 9px",
     fontWeight: 900,
     fontSize: 12,
+  },
+  pickupBox: {
+    marginTop: 12,
+    background: "#f8fafc",
+    border: "1px solid #cbd5e1",
+    borderRadius: 14,
+    padding: 10,
+    display: "grid",
+    gap: 4,
+    fontSize: 13,
   },
   barBlock: { marginTop: 10 },
   barLabel: {
