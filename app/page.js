@@ -2,63 +2,15 @@
 
 import { useEffect, useState } from "react";
 
-const SAVE_KEY = "fleetfix-v14-weather-fixed";
+const SAVE_KEY = "fleetfix-v15-broken-shop-flow";
 
 const WEATHER = [
-  {
-    name: "Clear Day",
-    icon: "☀️",
-    travel: 1,
-    repair: 1,
-    accident: 1,
-    rating: 0.1,
-    text: "Perfect service day. Normal travel, normal repair time, customer rating +0.1.",
-  },
-  {
-    name: "Rain",
-    icon: "🌧️",
-    travel: 1.15,
-    repair: 1.06,
-    accident: 1.1,
-    rating: 0,
-    text: "Travel is slower and repair takes slightly longer.",
-  },
-  {
-    name: "Storm",
-    icon: "⛈️",
-    travel: 1.25,
-    repair: 1.12,
-    accident: 1.25,
-    rating: 0,
-    text: "Travel is slow, repair takes longer, and accident risk is higher.",
-  },
-  {
-    name: "Heatwave",
-    icon: "🔥",
-    travel: 1.05,
-    repair: 1.1,
-    accident: 1.05,
-    rating: 0,
-    text: "Repair work takes longer because of heat.",
-  },
-  {
-    name: "Winter Morning",
-    icon: "❄️",
-    travel: 1.12,
-    repair: 1.08,
-    accident: 1.1,
-    rating: 0,
-    text: "Travel and repair work are slower because of cold conditions.",
-  },
-  {
-    name: "Fog",
-    icon: "🌫️",
-    travel: 1.2,
-    repair: 1.04,
-    accident: 1.2,
-    rating: 0,
-    text: "Travel is slow and risky. Repair time is slightly affected.",
-  },
+  { name: "Clear Day", icon: "☀️", travel: 1, repair: 1, accident: 1, rating: 0.1, text: "Perfect service day. Normal travel and repair. Rating +0.1." },
+  { name: "Rain", icon: "🌧️", travel: 1.15, repair: 1.06, accident: 1.1, rating: 0, text: "Travel is slower and repair takes slightly longer." },
+  { name: "Storm", icon: "⛈️", travel: 1.25, repair: 1.12, accident: 1.25, rating: 0, text: "Slow travel, longer repairs, higher accident risk." },
+  { name: "Heatwave", icon: "🔥", travel: 1.05, repair: 1.1, accident: 1.05, rating: 0, text: "Repair work takes longer because of heat." },
+  { name: "Winter Morning", icon: "❄️", travel: 1.12, repair: 1.08, accident: 1.1, rating: 0, text: "Travel and repairs are slower because of cold." },
+  { name: "Fog", icon: "🌫️", travel: 1.2, repair: 1.04, accident: 1.2, rating: 0, text: "Travel is slow and risky." },
 ];
 
 const EVENTS = [
@@ -71,41 +23,15 @@ const EVENTS = [
 const TRAITS = [
   { name: "Hard Worker", text: "Repair speed +8%", repair: 0.92, travel: 1, rating: 0, issue: 1, accident: 1 },
   { name: "Fast Driver", text: "Travel speed +10%", repair: 1, travel: 0.9, rating: 0, issue: 1, accident: 1 },
-  { name: "Careful", text: "Accident risk lower", repair: 1, travel: 1, rating: 0.1, issue: 1, accident: 0.65 },
+  { name: "Careful", text: "Lower accident risk", repair: 1, travel: 1, rating: 0.1, issue: 1, accident: 0.65 },
   { name: "Friendly", text: "Customer rating +0.4", repair: 1, travel: 1, rating: 0.4, issue: 1, accident: 1 },
   { name: "Expert Mechanic", text: "Extra issue risk lower", repair: 0.96, travel: 1, rating: 0.1, issue: 0.7, accident: 1 },
-  { name: "Moody", text: "Pays well, morale drops faster", repair: 1, travel: 1, rating: -0.1, issue: 1, accident: 1 },
+  { name: "Moody", text: "Morale drops faster", repair: 1, travel: 1, rating: -0.1, issue: 1, accident: 1 },
 ];
 
-const TECH_NAMES = [
-  "Ravi",
-  "Aman",
-  "Simran",
-  "Gurpreet",
-  "Iqbal",
-  "Karan",
-  "Mehak",
-  "Arjun",
-  "Jaspreet",
-  "Kabir",
-  "Jordan",
-  "Miguel",
-  "Noah",
-  "Ava",
-  "Leo",
-  "Zara",
-];
+const TECH_NAMES = ["Ravi", "Aman", "Simran", "Gurpreet", "Iqbal", "Karan", "Mehak", "Arjun", "Jaspreet", "Kabir", "Jordan", "Miguel", "Noah", "Ava", "Leo", "Zara"];
 
-const FRIENDS = [
-  "RoadKing Repairs",
-  "Highway Heroes",
-  "Diesel Doctors",
-  "QuickFix Crew",
-  "Tow Titans",
-  "City Truck Pros",
-  "Trailer Masters",
-  "Garage Legends",
-];
+const FRIENDS = ["RoadKing Repairs", "Highway Heroes", "Diesel Doctors", "QuickFix Crew", "Tow Titans", "City Truck Pros", "Trailer Masters", "Garage Legends"];
 
 const PARTS = [
   part("Tyre", "🛞", 70, 1),
@@ -140,8 +66,8 @@ const TOOLS = [
 ];
 
 const VEHICLES = [
-  { type: "Service Bike", icon: "🏍️", cost: 120, unlock: 3, speed: 1.22, fuel: 1, storage: 2 },
-  { type: "White/Red Pickup", icon: "🛻", cost: 250, unlock: 5, speed: 1.08, fuel: 3, storage: 6 },
+  { type: "Service Bike", icon: "🏍️", cost: 120, unlock: 2, speed: 1.22, fuel: 1, storage: 2 },
+  { type: "White/Red Pickup", icon: "🛻", cost: 250, unlock: 3, speed: 1.08, fuel: 3, storage: 6 },
   { type: "Tow Truck", icon: "🚚", cost: 600, unlock: 10, speed: 0.95, fuel: 5, storage: 9 },
   { type: "Mobile Workshop Van", icon: "🚐", cost: 900, unlock: 15, speed: 0.98, fuel: 5, storage: 12 },
   { type: "Heavy Recovery Truck", icon: "🚛", cost: 1600, unlock: 25, speed: 0.85, fuel: 8, storage: 16 },
@@ -175,24 +101,26 @@ const JOBS = [
 ];
 
 const BUILDINGS = [
-  building("Road", "🛣️", 120, 0, 1, 100, 18, false, 1, "Required for town growth."),
-  building("Owner House", "🏡", 320, 15, 1, 300, 30, true, 3, "Owner family home."),
-  building("Family House", "🏠", 380, 20, 2, 360, 35, true, 3, "Homes for technicians and families."),
-  building("Park", "🌳", 600, 35, 3, 520, 45, true, 5, "Improves town happiness."),
-  building("School", "🏫", 1000, 70, 5, 900, 70, true, 7, "Education for families."),
-  building("Gym", "🏋️", 900, 55, 6, 760, 55, false, 4, "Improves fitness and morale."),
-  building("Hospital", "🏥", 1300, 90, 7, 1200, 85, false, 6, "Handles rare technician incidents."),
-  building("Fire Station", "🚒", 1500, 100, 8, 1350, 90, false, 4, "Safety building."),
-  building("Community Center", "🏛️", 1700, 120, 10, 1600, 105, true, 8, "Boosts town prestige."),
-  building("Warehouse", "🏭", 1800, 150, 10, 2000, 110, false, 1, "Increases storage capacity."),
-  building("Fuel Station", "⛽", 2200, 170, 12, 2300, 120, false, 2, "Supports fuel system."),
-  building("Training Academy", "🎓", 2500, 210, 15, 2800, 140, false, 5, "Supports technician training."),
-  building("Apartment Block", "🏢", 3200, 260, 18, 3500, 160, true, 7, "Housing for bigger workforce."),
-  building("Mall", "🏬", 4200, 350, 21, 5000, 190, true, 9, "Big city lifestyle building."),
-  building("Airport Road", "🛫", 6000, 550, 30, 8000, 240, false, 3, "Global support."),
-  building("Rail Yard", "🚆", 9000, 800, 35, 12000, 300, false, 2, "Supports train jobs."),
-  building("Port Dock", "🚢", 12000, 1100, 45, 16000, 360, false, 2, "Supports ship jobs."),
-  building("Air Base", "✈️", 16000, 1600, 55, 22000, 420, false, 2, "Supports aviation jobs."),
+  building("Road", "🛣️", 120, 0, 1, 100, 18, false, 1, "Required for town growth.", "road"),
+  building("Tree Decoration", "🌲", 80, 0, 1, 50, 10, false, 2, "Decoration. No ribbon cutting.", "decoration"),
+  building("Flower Garden", "🌸", 100, 0, 1, 60, 12, false, 3, "Decoration. No ribbon cutting.", "decoration"),
+  building("Owner House", "🏡", 320, 15, 1, 300, 30, true, 3, "Owner family home.", "building"),
+  building("Family House", "🏠", 380, 20, 2, 360, 35, true, 3, "Homes for technicians and families.", "building"),
+  building("Park", "🌳", 600, 35, 3, 520, 45, true, 5, "Improves town happiness.", "building"),
+  building("School", "🏫", 1000, 70, 5, 900, 70, true, 7, "Education for families.", "building"),
+  building("Gym", "🏋️", 900, 55, 6, 760, 55, false, 4, "Improves fitness and morale.", "building"),
+  building("Hospital", "🏥", 1300, 90, 7, 1200, 85, false, 6, "Handles rare technician incidents.", "building"),
+  building("Fire Station", "🚒", 1500, 100, 8, 1350, 90, false, 4, "Safety building.", "building"),
+  building("Community Center", "🏛️", 1700, 120, 10, 1600, 105, true, 8, "Boosts town prestige.", "building"),
+  building("Warehouse", "🏭", 1800, 150, 10, 2000, 110, false, 1, "Increases storage capacity.", "building"),
+  building("Fuel Station", "⛽", 2200, 170, 12, 2300, 120, false, 2, "Supports fuel system.", "building"),
+  building("Training Academy", "🎓", 2500, 210, 15, 2800, 140, false, 5, "Supports technician training.", "building"),
+  building("Apartment Block", "🏢", 3200, 260, 18, 3500, 160, true, 7, "Housing for bigger workforce.", "building"),
+  building("Mall", "🏬", 4200, 350, 21, 5000, 190, true, 9, "Big city lifestyle building.", "building"),
+  building("Airport Road", "🛫", 6000, 550, 30, 8000, 240, false, 3, "Global support building.", "building"),
+  building("Rail Yard", "🚆", 9000, 800, 35, 12000, 300, false, 2, "Supports train jobs.", "building"),
+  building("Port Dock", "🚢", 12000, 1100, 45, 16000, 360, false, 2, "Supports ship jobs.", "building"),
+  building("Air Base", "✈️", 16000, 1600, 55, 22000, 420, false, 2, "Supports aviation jobs.", "building"),
 ];
 
 const TABS = [
@@ -225,8 +153,8 @@ function job(title, vehicle, skill, partNeeded, partQty, travel, repair, back, c
   return { title, vehicle, skill, partNeeded, partQty, travel, repair, back, coins, money, xp, techXp, rep, unlock, urgency, icon, miniGame, customer };
 }
 
-function building(type, icon, costCoins, costMoney, unlockLevel, value, buildTime, family, happiness, description) {
-  return { type, icon, costCoins, costMoney, unlockLevel, value, buildTime, family, happiness, description };
+function building(type, icon, costCoins, costMoney, unlockLevel, value, buildTime, family, happiness, description, category) {
+  return { type, icon, costCoins, costMoney, unlockLevel, value, buildTime, family, happiness, description, category };
 }
 
 function newId() {
@@ -253,15 +181,15 @@ function salaryFor(level, isOwner) {
 
 function startParts() {
   return {
-    Tyre: 8,
-    Battery: 6,
-    "Engine Oil": 6,
-    "Brake Kit": 5,
-    "Bulb Pack": 6,
-    "7-Way Plug": 4,
-    "Landing Leg Pin": 3,
-    "Generator Fuse": 3,
-    "Inspection Seal": 4,
+    Tyre: 4,
+    Battery: 3,
+    "Engine Oil": 3,
+    "Brake Kit": 2,
+    "Bulb Pack": 3,
+    "7-Way Plug": 2,
+    "Landing Leg Pin": 2,
+    "Generator Fuse": 0,
+    "Inspection Seal": 0,
     "Diagnostic Chip": 0,
     "Tow Hook": 0,
     "Fuel Seal Kit": 0,
@@ -278,7 +206,7 @@ function startParts() {
 
 function pickupEquipment() {
   return {
-    Tyre: 2,
+    Tyre: 1,
     Battery: 1,
     "Engine Oil": 1,
     "Brake Kit": 1,
@@ -294,7 +222,6 @@ function pickupEquipment() {
 
 function createTechnician(name, isOwner = false, areaId = "area-1") {
   const trait = isOwner ? TRAITS[0] : pick(TRAITS);
-
   return {
     id: newId(),
     name,
@@ -322,13 +249,15 @@ function newGame(companyName, ownerName, townName, countryName) {
 
   return {
     started: true,
+    shopRepaired: false,
+    starterIntroDone: false,
     companyName,
     ownerName,
     townName,
     countryName,
-    coins: 700,
-    money: 120,
-    fuel: 100,
+    coins: 120,
+    money: 20,
+    fuel: 60,
     xp: 0,
     level: 1,
     reputation: 0,
@@ -339,8 +268,8 @@ function newGame(companyName, ownerName, townName, countryName) {
     salaryDue: 0,
     completedJobs: 0,
     totalRevenue: 0,
-    worldValue: 1200,
-    storageBase: 35,
+    worldValue: 300,
+    storageBase: 20,
     yardLevel: 1,
     trainingLevel: 1,
     partShopLevel: 1,
@@ -376,19 +305,7 @@ function newGame(companyName, ownerName, townName, countryName) {
       "Air Compressor Tool": 0,
       "Premium Tool Chest": 0,
     },
-    vehicles: [
-      {
-        id: "owner-pickup",
-        name: "White/Red Pickup",
-        type: "Pickup",
-        icon: "🛻",
-        level: 1,
-        speed: 1,
-        fuelUse: 3,
-        storage: 6,
-        assignedTechnicianId: owner.id,
-      },
-    ],
+    vehicles: [],
     technicians: [owner],
     parts: startParts(),
     worldAreas: [
@@ -396,12 +313,10 @@ function newGame(companyName, ownerName, townName, countryName) {
         id: "area-1",
         name: townName,
         unlocked: true,
-        landSlots: 10,
+        landSlots: 8,
         tiles: [
-          { id: "garage", type: "Garage", icon: "🏚️", level: 1, status: "complete", family: false, value: 500 },
-          { id: "parts", type: "Parts Store", icon: "🏪", level: 1, status: "complete", family: false, value: 400 },
-          { id: "clinic", type: "Clinic", icon: "🏥", level: 1, status: "complete", family: false, value: 300 },
-          { id: "road", type: "Road", icon: "🛣️", level: 1, status: "complete", family: false, value: 100 },
+          { id: "broken-shop", type: "Broken Shop", icon: "🏚️", level: 1, status: "broken", category: "building", family: false, value: 100 },
+          { id: "road", type: "Road", icon: "🛣️", level: 1, status: "complete", category: "road", family: false, value: 100 },
         ],
       },
     ],
@@ -419,6 +334,18 @@ function normalizeGame(game) {
   safe.dailyMissions = game.dailyMissions?.length ? game.dailyMissions : createDailyMissions();
   safe.insurance = { technicians: false, vehicles: false, parts: false, ...(game.insurance || {}) };
   safe.activeJobs = [];
+  safe.vehicles = game.vehicles || [];
+  safe.shopRepaired = game.shopRepaired ?? false;
+
+  safe.worldAreas = (game.worldAreas || []).map((area) => ({
+    ...area,
+    tiles: (area.tiles || []).map((tile) => ({
+      ...tile,
+      category: tile.category || guessTileCategory(tile.type),
+      status: ["building"].includes(tile.status) ? "complete" : tile.status,
+    })),
+  }));
+
   safe.technicians = (game.technicians || []).map((t) => ({
     ...createTechnician(t.name || "Tech", t.isOwner, t.assignedAreaId || "area-1"),
     ...t,
@@ -429,6 +356,16 @@ function normalizeGame(game) {
   }));
 
   return safe;
+}
+
+function guessTileCategory(type) {
+  if (type === "Road" || type === "Airport Road") return "road";
+  if (type.includes("Tree") || type.includes("Flower") || type.includes("Decoration") || type === "Expansion Field") return "decoration";
+  return "building";
+}
+
+function isRibbonBuilding(tile) {
+  return tile.category === "building" && !["Road", "Broken Shop", "Expansion Field"].includes(tile.type);
 }
 
 function averageRating(game) {
@@ -445,13 +382,15 @@ function completedBuildings(game, type) {
 
 function townHappiness(game) {
   const base = 40;
-
   const buildingPoints = game.worldAreas.reduce((sum, area) => {
-    return sum + area.tiles.reduce((s, tile) => {
-      if (tile.status !== "complete") return s;
-      const data = BUILDINGS.find((b) => b.type === tile.type);
-      return s + (data?.happiness || 1);
-    }, 0);
+    return (
+      sum +
+      area.tiles.reduce((s, tile) => {
+        if (tile.status !== "complete") return s;
+        const data = BUILDINGS.find((b) => b.type === tile.type);
+        return s + (data?.happiness || 1);
+      }, 0)
+    );
   }, 0);
 
   const completeCount = game.worldAreas.reduce((sum, area) => sum + area.tiles.filter((t) => t.status === "complete").length, 0);
@@ -485,7 +424,6 @@ function maxTechnicians(game) {
 
 function servicePoints(game) {
   const area = getActiveArea(game);
-
   const points = [
     `${area.name} Main Road`,
     `${area.name} Service Yard`,
@@ -511,27 +449,85 @@ function servicePoints(game) {
   return [...new Set(points)];
 }
 
-function makeCalls(game) {
-  const availableJobs = JOBS.filter((j) => j.unlock <= game.level);
+function starterJobs() {
+  return [
+    {
+      id: newId(),
+      title: "First Roadside Jump Start",
+      vehicle: "Car",
+      skill: "All-Rounder",
+      partNeeded: "Battery",
+      partQty: 0,
+      travel: 5,
+      repair: 10,
+      back: 5,
+      coins: 90,
+      money: 10,
+      xp: 45,
+      techXp: 45,
+      rep: 2,
+      unlock: 1,
+      urgency: "Starter",
+      icon: "🔋",
+      miniGame: "Cable Order",
+      customer: "Normal",
+      areaId: "area-1",
+      mapPoint: "Near Broken Shop Road",
+      noPay: false,
+      rewardCoins: 90,
+      rewardMoney: 10,
+      problem: "First customer needs a jump start. Owner will walk 5 seconds to the job.",
+    },
+    {
+      id: newId(),
+      title: "Loose Trailer Light",
+      vehicle: "Trailer",
+      skill: "All-Rounder",
+      partNeeded: "Bulb Pack",
+      partQty: 0,
+      travel: 6,
+      repair: 12,
+      back: 6,
+      coins: 100,
+      money: 12,
+      xp: 50,
+      techXp: 50,
+      rep: 2,
+      unlock: 1,
+      urgency: "Starter",
+      icon: "💡",
+      miniGame: "Select Bulb",
+      customer: "Normal",
+      areaId: "area-1",
+      mapPoint: "Small Town Street",
+      noPay: false,
+      rewardCoins: 100,
+      rewardMoney: 12,
+      problem: "A trailer light is loose. Owner can walk there and repair it.",
+    },
+  ];
+}
 
+function makeCalls(game) {
+  if (!game.shopRepaired) return [];
+
+  if (game.level === 1) {
+    return starterJobs();
+  }
+
+  const availableJobs = JOBS.filter((j) => j.unlock <= game.level);
+  const safeJobs = availableJobs.length > 0 ? availableJobs : JOBS.filter((j) => j.unlock <= 1);
   const points = servicePoints(game);
   const area = getActiveArea(game);
 
-  return [...availableJobs]
+  return [...safeJobs]
     .sort(() => Math.random() - 0.5)
     .slice(0, 8)
     .map((template, index) => {
       const point = points[(game.day + index + Math.floor(Math.random() * points.length)) % points.length];
       const noPay = Math.random() < (game.day % 17 === 0 || game.day % 30 === 0 ? 0.16 : 0.02);
       const eventBonus = game.festivalEvent?.bonus || 1;
-      const customerBonus =
-        template.customer === "Government"
-          ? 1.25
-          : template.customer === "Fleet"
-          ? 1.12
-          : template.customer === "Emergency"
-          ? 1.2
-          : 1;
+      const customerBonus = template.customer === "Government" ? 1.25 : template.customer === "Fleet" ? 1.12 : template.customer === "Emergency" ? 1.2 : 1;
 
       return {
         id: newId(),
@@ -541,9 +537,7 @@ function makeCalls(game) {
         noPay,
         rewardCoins: noPay ? 0 : Math.round((template.coins + game.level * 8) * eventBonus * customerBonus),
         rewardMoney: noPay ? 0 : Math.round((template.money + game.level * 2) * eventBonus * customerBonus),
-        problem: noPay
-          ? "Customer may not pay. Complete it for reputation and trust."
-          : `${template.customer} customer request received from ${point}.`,
+        problem: noPay ? "Customer may not pay. Complete it for reputation and trust." : `${template.customer} customer request received from ${point}.`,
       };
     });
 }
@@ -598,7 +592,6 @@ function contracts(level) {
 
 function contractBonus(game) {
   const data = contracts(game.level);
-
   return game.signedContracts.reduce(
     (sum, id) => {
       const c = data.find((x) => x.id === id);
@@ -615,24 +608,14 @@ function nextAreaCost(game) {
 }
 
 function nextAreaName(game) {
-  const names = [
-    "Riverbend County",
-    "Highway Desert",
-    "Snowfield District",
-    "Coastal Port",
-    "Mountain Pass",
-    "Metro Island",
-    "Northern Frontier",
-    "Cargo Bay City",
-    "Sunrise Plains",
-    "Global Hub",
-  ];
-
+  const names = ["Riverbend County", "Highway Desert", "Snowfield District", "Coastal Port", "Mountain Pass", "Metro Island", "Northern Frontier", "Cargo Bay City", "Sunrise Plains", "Global Hub"];
   return names[game.worldAreas.length - 1] || `World Area ${game.worldAreas.length + 1}`;
 }
 
 function milestones(level) {
   return [
+    { level: 2, name: "Service Bike Unlock", coins: 100, money: 30 },
+    { level: 3, name: "Pickup Unlock", coins: 180, money: 45 },
     { level: 5, name: "First Technician", coins: 400, money: 60 },
     { level: 10, name: "Fuel System", coins: 700, money: 90 },
     { level: 15, name: "Advanced Diagnostics", coins: 1100, money: 140 },
@@ -652,7 +635,7 @@ function rank(rep) {
   if (rep >= 180) return "Regional Fleet Leader";
   if (rep >= 65) return "Trusted Fleet Partner";
   if (rep >= 18) return "Growing Garage";
-  return "Small Town Garage";
+  return "Broken Shop Starter";
 }
 
 function time(seconds) {
@@ -662,34 +645,27 @@ function time(seconds) {
 
 function toolBonus(game, call) {
   let bonus = 1;
-
   TOOLS.forEach((tool) => {
     if ((game.tools[tool.name] || 0) > 0 && (tool.skill === call.skill || tool.skill === "All")) {
       bonus *= tool.bonus;
     }
   });
-
   return bonus;
 }
 
 function ratingFor(job, tech, game) {
   let rating = 3.2;
-
   if (job.skillMatch) rating += 0.6;
   if (tech?.energy > 50) rating += 0.3;
   if (tech?.morale > 70) rating += 0.2;
-
   rating += tech?.trait?.rating || 0;
   rating += game.weather?.rating || 0;
-
   if (job.approvedExtraIssue) rating += 0.25;
   if (job.declinedExtraIssue) rating -= 0.35;
   if (job.miniGameBonus) rating += 0.25;
   if (job.noPay) rating += 0.15;
   if (townHappiness(game) >= 70) rating += 0.2;
-
   rating -= roadPenalty(game) * 0.12;
-
   return Math.max(1, Math.min(5, rating));
 }
 
@@ -705,11 +681,9 @@ function vehiclePosition(job) {
   const total = job.phaseTotal || 1;
   const done = total - job.phaseRemaining;
   const progress = Math.max(0, Math.min(1, done / total));
-
   if (job.phase === "travel") return 10 + progress * 55;
   if (job.phase === "repair") return 65;
   if (job.phase === "return") return 65 - progress * 55;
-
   return 10;
 }
 
@@ -728,7 +702,6 @@ export default function Home() {
 
   useEffect(() => {
     const saved = localStorage.getItem(SAVE_KEY);
-
     if (saved) {
       const parsed = normalizeGame(JSON.parse(saved));
       setGame(parsed);
@@ -758,8 +731,13 @@ export default function Home() {
             const remaining = Math.max(0, tile.remaining - 1);
 
             if (remaining <= 0) {
-              notes.push(`${tile.type} construction finished. Cut the ribbon to open it.`);
-              return { ...tile, remaining: 0, status: "readyRibbon" };
+              if (isRibbonBuilding(tile)) {
+                notes.push(`${tile.type} construction finished. Cut the ribbon to open it.`);
+                return { ...tile, remaining: 0, status: "readyRibbon" };
+              }
+
+              notes.push(`${tile.type} construction finished.`);
+              return { ...tile, remaining: 0, status: "complete" };
             }
 
             return { ...tile, remaining };
@@ -812,12 +790,7 @@ export default function Home() {
               id: newId(),
               technicianId: tech.id,
               technicianName: tech.name,
-              reason: pick([
-                "I need one day off for family work.",
-                "I have personal work tomorrow. Can I take a day off?",
-                "I need to visit home for important work.",
-                "I need one rest day because of personal plans.",
-              ]),
+              reason: pick(["I need one day off for family work.", "I have personal work tomorrow. Can I take a day off?", "I need to visit home for important work.", "I need one rest day because of personal plans."]),
             };
 
             g.dayOffRequests = [...g.dayOffRequests, request];
@@ -855,9 +828,7 @@ export default function Home() {
         const tech = g.technicians.find((t) => t.id === job.technicianId);
         const backupAvailable = g.technicians.some((t) => t.id !== job.technicianId && t.status === "Free" && t.energy > 0);
 
-        const issueChance =
-          (job.urgency === "Critical" ? 0.035 : job.urgency === "High" ? 0.022 : 0.012) *
-          (tech?.trait?.issue || 1);
+        const issueChance = (job.urgency === "Critical" ? 0.035 : job.urgency === "High" ? 0.022 : 0.012) * (tech?.trait?.issue || 1);
 
         if (job.phase === "repair" && !job.extraIssueChecked && Math.random() < issueChance) {
           if ((tech?.energy || 100) < 20 && backupAvailable) {
@@ -930,12 +901,7 @@ export default function Home() {
 
         if (rating >= 4.5) g.dailyMissions = updateMission(g.dailyMissions, "rating");
 
-        const accidentChance =
-          (job.urgency === "Critical" ? 0.012 : job.urgency === "High" ? 0.006 : 0.002) *
-          (g.weather?.accident || 1) *
-          (tech?.trait?.accident || 1) *
-          (g.insurance.technicians ? 0.55 : 1);
-
+        const accidentChance = (job.urgency === "Critical" ? 0.012 : job.urgency === "High" ? 0.006 : 0.002) * (g.weather?.accident || 1) * (tech?.trait?.accident || 1) * (g.insurance.technicians ? 0.55 : 1);
         const accident = Math.random() < accidentChance;
 
         g.technicians = g.technicians.map((t) => {
@@ -995,17 +961,69 @@ export default function Home() {
 
     const g = newGame(setup.companyName, setup.ownerName, setup.townName, setup.countryName);
     setGame(g);
-    setCalls(makeCalls(g));
-    setMessage(`Welcome to ${setup.companyName}. Your repair country begins in ${setup.townName}.`);
+    setCalls([]);
+    setMessage(`${setup.ownerName} entered a broken shop in ${setup.townName}. Repair the shop for free to start your business.`);
+  }
+
+  function repairBrokenShop() {
+    setGame((g) => {
+      const updated = {
+        ...g,
+        shopRepaired: true,
+        starterIntroDone: true,
+        worldValue: g.worldValue + 400,
+        worldAreas: g.worldAreas.map((area) =>
+          area.id === g.activeAreaId
+            ? {
+                ...area,
+                tiles: area.tiles.map((tile) =>
+                  tile.id === "broken-shop"
+                    ? {
+                        ...tile,
+                        type: "Small Repair Shop",
+                        icon: "🔧",
+                        status: "complete",
+                        category: "building",
+                        value: 500,
+                      }
+                    : tile
+                ),
+              }
+            : area
+        ),
+      };
+
+      setCalls(starterJobs());
+      return updated;
+    });
+
+    setMessage("You repaired the broken shop for free. First service call is now available.");
+    setTab("calls");
   }
 
   function dispatch(call, techId) {
     const tech = game.technicians.find((t) => t.id === techId);
-    const vehicle = game.vehicles.find((v) => v.assignedTechnicianId === techId) || game.vehicles[0];
+    const assignedVehicle = game.vehicles.find((v) => v.assignedTechnicianId === techId);
+
+    const isWalking = !assignedVehicle;
+    const vehicle = assignedVehicle || {
+      id: "walking",
+      name: "Walking",
+      type: "Walking",
+      icon: "🚶",
+      level: 1,
+      speed: 1,
+      fuelUse: 0,
+      storage: 0,
+    };
 
     if (!tech || tech.status !== "Free") return setMessage("Technician is not free.");
     if (tech.loyalty < 18 && call.urgency === "Critical" && !tech.isOwner) return setMessage(`${tech.name} refused this critical job due to low loyalty.`);
-    if (game.fuel < vehicle.fuelUse) return setMessage("Not enough fuel. Buy fuel in Market.");
+    if (!isWalking && game.fuel < vehicle.fuelUse) return setMessage("Not enough fuel. Buy fuel in Market.");
+
+    if (isWalking && call.urgency !== "Starter" && call.urgency !== "Low" && game.level < 2) {
+      return setMessage("Before Level 2, owner can only walk to starter/simple jobs. Buy Service Bike at Level 2.");
+    }
 
     const pickupStock = tech.pickupEquipment?.[call.partNeeded] || 0;
     const shopStock = game.parts[call.partNeeded] || 0;
@@ -1030,16 +1048,15 @@ export default function Home() {
     }
 
     const skillMatch = tech.skill === call.skill || tech.skill === "All-Rounder";
-
     const weatherTravel = game.weather?.travel || 1;
     const weatherRepair = game.weather?.repair || 1;
-
     const areaBonus = tech.assignedAreaId === call.areaId ? 0.78 : 1;
     const road = 1 + roadPenalty(game) * 0.08;
+    const walkingStarter = vehicle.type === "Walking";
 
-    const travelTime = Math.max(4, Math.floor(call.travel * weatherTravel * areaBonus * tech.trait.travel * road / vehicle.speed));
+    const travelTime = walkingStarter ? 5 : Math.max(4, Math.floor((call.travel * weatherTravel * areaBonus * tech.trait.travel * road) / vehicle.speed));
     const repairTime = Math.max(8, Math.floor(call.repair * weatherRepair * (skillMatch ? 0.7 : 1) * tech.trait.repair * toolBonus(game, call)));
-    const returnTime = Math.max(4, Math.floor(call.back * weatherTravel * areaBonus * tech.trait.travel * road / vehicle.speed));
+    const returnTime = walkingStarter ? 5 : Math.max(4, Math.floor((call.back * weatherTravel * areaBonus * tech.trait.travel * road) / vehicle.speed));
 
     const activeJob = {
       ...call,
@@ -1048,6 +1065,7 @@ export default function Home() {
       technicianName: tech.name,
       vehicleId: vehicle.id,
       vehicleName: vehicle.name,
+      vehicleIcon: vehicle.icon,
       phase: "travel",
       phaseRemaining: travelTime,
       phaseTotal: travelTime,
@@ -1075,9 +1093,13 @@ export default function Home() {
       ),
     }));
 
-    setCalls((old) => old.filter((c) => c.id !== call.id));
+    setCalls((old) => {
+      const next = old.filter((c) => c.id !== call.id);
+      return next.length ? next : makeCalls({ ...game, shopRepaired: true });
+    });
+
     setTab("jobs");
-    setMessage(`${tech.name} dispatched to ${call.mapPoint}. Weather affects time only. Mini-game ready: ${call.miniGame}.`);
+    setMessage(`${tech.name} dispatched to ${call.mapPoint} by ${vehicle.name}. Mini-game ready: ${call.miniGame}.`);
   }
 
   function completeMiniGame(jobId, success) {
@@ -1151,7 +1173,7 @@ export default function Home() {
     if (game.level < b.unlockLevel) return setMessage(`${b.type} unlocks at Level ${b.unlockLevel}.`);
     if (activeConstruction >= game.builderTeams) return setMessage(`All builder teams are busy: ${activeConstruction}/${game.builderTeams}.`);
     if (area.tiles.length >= area.landSlots) return setMessage("No free land slots. Upgrade yard or expand globe.");
-    if (b.type !== "Road" && roadPenalty(game) > 1) return setMessage("Road connection weak. Build more roads first.");
+    if (b.category !== "road" && roadPenalty(game) > 1) return setMessage("Road connection weak. Build more roads first.");
     if (game.coins < b.costCoins || game.money < b.costMoney) return setMessage(`Need 🪙 ${b.costCoins} and 💵 ${b.costMoney}.`);
 
     const finalTime = Math.ceil(b.buildTime * (roadPenalty(game) > 0 ? 1.1 + roadPenalty(game) * 0.05 : 1));
@@ -1162,6 +1184,7 @@ export default function Home() {
       icon: b.icon,
       level: 1,
       status: "building",
+      category: b.category,
       remaining: finalTime,
       totalTime: finalTime,
       family: b.family,
@@ -1237,7 +1260,6 @@ export default function Home() {
 
     PARTS.filter((p) => p.unlockLevel <= game.level).forEach((p) => {
       const stock = next[p.name] || 0;
-
       if (stock < p.reorder) {
         const add = p.reorder - stock;
         qty += add;
@@ -1319,14 +1341,14 @@ export default function Home() {
 
   function upgradeTruck(id) {
     const tech = game.technicians.find((t) => t.id === id);
-    const cost = 90 + tech.truckLevel * 75;
+    const cost = 90 + (tech.truckLevel || 1) * 75;
 
     if (game.money < cost) return setMessage(`Truck upgrade needs ${cost} money.`);
 
     setGame((g) => ({
       ...g,
       money: g.money - cost,
-      technicians: g.technicians.map((t) => (t.id === id ? { ...t, truckLevel: t.truckLevel + 1, loyalty: Math.min(100, t.loyalty + 2) } : t)),
+      technicians: g.technicians.map((t) => (t.id === id ? { ...t, truckLevel: (t.truckLevel || 1) + 1, loyalty: Math.min(100, t.loyalty + 2) } : t)),
     }));
   }
 
@@ -1396,6 +1418,9 @@ export default function Home() {
     if (game.level < vehicle.unlock) return setMessage(`${vehicle.type} unlocks at Level ${vehicle.unlock}.`);
     if (game.money < vehicle.cost) return setMessage(`Need ${vehicle.cost} money.`);
 
+    const owner = game.technicians.find((t) => t.isOwner);
+    const alreadyAssignedOwner = game.vehicles.some((v) => v.assignedTechnicianId === owner?.id);
+
     const v = {
       id: newId(),
       name: vehicle.type,
@@ -1405,10 +1430,11 @@ export default function Home() {
       speed: vehicle.speed,
       fuelUse: vehicle.fuel,
       storage: vehicle.storage,
-      assignedTechnicianId: null,
+      assignedTechnicianId: alreadyAssignedOwner ? null : owner?.id || null,
     };
 
     setGame((g) => ({ ...g, money: g.money - vehicle.cost, vehicles: [...g.vehicles, v] }));
+    setMessage(`${vehicle.type} purchased.${alreadyAssignedOwner ? " Assign it from Garage." : " Assigned to owner."}`);
   }
 
   function assignVehicle(vehicleId, techId) {
@@ -1463,8 +1489,8 @@ export default function Home() {
       unlocked: true,
       landSlots: 8,
       tiles: [
-        { id: `${areaId}-road`, type: "Road", icon: "🛣️", level: 1, status: "complete", family: false, value: 100 },
-        { id: `${areaId}-field`, type: "Expansion Field", icon: "🌍", level: 1, status: "complete", family: false, value: 200 },
+        { id: `${areaId}-road`, type: "Road", icon: "🛣️", level: 1, status: "complete", category: "road", family: false, value: 100 },
+        { id: `${areaId}-field`, type: "Expansion Field", icon: "🌍", level: 1, status: "complete", category: "decoration", family: false, value: 200 },
       ],
     };
 
@@ -1508,11 +1534,9 @@ export default function Home() {
 
   function addParts(parts, add) {
     const next = { ...parts };
-
     Object.entries(add).forEach(([key, value]) => {
       next[key] = (next[key] || 0) + value;
     });
-
     return next;
   }
 
@@ -1541,9 +1565,12 @@ export default function Home() {
 
   function checkAchievements(g, notes) {
     const achievements = [
+      { id: "shop-repair", name: "Shop Repaired", condition: g.shopRepaired, coins: 50, money: 10 },
       { id: "first-repair", name: "First Repair", condition: g.completedJobs >= 1, coins: 100, money: 0 },
       { id: "ten-jobs", name: "10 Jobs Completed", condition: g.completedJobs >= 10, coins: 500, money: 0 },
       { id: "hundred-jobs", name: "100 Jobs Completed", condition: g.completedJobs >= 100, coins: 3000, money: 300 },
+      { id: "first-bike", name: "First Service Bike", condition: g.vehicles.some((v) => v.type === "Service Bike"), coins: 150, money: 20 },
+      { id: "first-pickup", name: "First Pickup", condition: g.vehicles.some((v) => v.type === "White/Red Pickup"), coins: 200, money: 30 },
       { id: "first-tech", name: "First Technician Hired", condition: g.technicians.length >= 2, coins: 400, money: 0 },
       { id: "first-contract", name: "First Contract Signed", condition: g.signedContracts.length >= 1, coins: 0, money: 100 },
       { id: "hospital-built", name: "Healthcare Builder", condition: completedBuildings(g, "Hospital") >= 1, coins: 700, money: 0 },
@@ -1668,7 +1695,7 @@ export default function Home() {
           <div style={styles.logo}>🛠️🌍</div>
           <h1 style={styles.title}>FleetFix Tycoon</h1>
           <p style={styles.subtitle}>
-            Build your repair country, complete service calls, manage technicians, grow towns, sign contracts, and expand across the globe.
+            Start with a broken shop, repair it for free, walk to your first service call, buy a house, unlock service bike at Level 2, pickup at Level 3, and hire your first technician at Level 5.
           </p>
 
           <div style={styles.formGrid}>
@@ -1681,7 +1708,7 @@ export default function Home() {
           {message && <div style={styles.message}>📢 {message}</div>}
 
           <button style={styles.mainButton} onClick={startGame}>
-            Start Repair Empire
+            Enter Broken Shop
           </button>
         </section>
       </main>
@@ -1784,13 +1811,23 @@ export default function Home() {
           <Panel>
             <Top
               title={`🏙️ ${active.name}`}
-              text="Township-style construction, roads, builder teams, ribbon cutting, happiness and family support."
+              text="Begin with a broken shop. Roads and decorations complete without ribbon. Ribbon cutting is only for buildings."
               action={
                 <button style={styles.dangerButton} onClick={resetGame}>
                   Reset
                 </button>
               }
             />
+
+            {!game.shopRepaired && (
+              <div style={styles.message}>
+                🏚️ Your first shop is broken. Repair it for free to start your repair business.
+                <br />
+                <button style={styles.greenButton} onClick={repairBrokenShop}>
+                  Repair Broken Shop for Free
+                </button>
+              </div>
+            )}
 
             <div style={styles.statLine}>
               <Mini label="World Value" value={`🏙️ ${game.worldValue}`} />
@@ -1805,10 +1842,11 @@ export default function Home() {
                 const progress = tile.status === "building" ? Math.round(100 - (tile.remaining / tile.totalTime) * 100) : 100;
 
                 return (
-                  <div key={tile.id} style={tile.status === "building" ? styles.tileBuilding : tile.status === "readyRibbon" ? styles.tileRibbon : styles.tile}>
+                  <div key={tile.id} style={tile.status === "broken" ? styles.tileBroken : tile.status === "building" ? styles.tileBuilding : tile.status === "readyRibbon" ? styles.tileRibbon : styles.tile}>
                     <div style={styles.tileIcon}>{tile.icon}</div>
                     <b>{tile.type}</b>
-                    <small>Level {tile.level}</small>
+                    <small>{tile.category || guessTileCategory(tile.type)}</small>
+                    {tile.status === "broken" && <small>Needs free repair</small>}
                     {tile.status === "building" && (
                       <>
                         <small>Building: {time(tile.remaining)}</small>
@@ -1826,7 +1864,7 @@ export default function Home() {
               })}
             </div>
 
-            <h3>Construct Buildings</h3>
+            <h3>Construct Buildings, Roads & Decorations</h3>
             <div style={styles.cards}>
               {BUILDINGS.map((b) => (
                 <Card key={b.type}>
@@ -1834,7 +1872,7 @@ export default function Home() {
                   <h3>{b.type}</h3>
                   <p>{b.description}</p>
                   <p>
-                    Unlock L{b.unlockLevel} • Time {time(b.buildTime)}
+                    Type: {b.category} • Unlock L{b.unlockLevel} • Time {time(b.buildTime)}
                   </p>
                   <p>
                     Cost 🪙 {b.costCoins} • 💵 {b.costMoney} • 😊 +{b.happiness}
@@ -1848,10 +1886,10 @@ export default function Home() {
 
             <h3>2.5D Town Preview</h3>
             <div style={styles.map}>
-              <MapBuilding icon="🏚️" title="Garage" style={{ left: "6%", top: "14%" }} />
-              <MapBuilding icon="🏪" title="Parts Store" style={{ left: "28%", top: "12%" }} />
-              <MapBuilding icon="🚨" title="Call Center" style={{ right: "29%", top: "12%" }} />
-              <MapBuilding icon="🏥" title="Clinic" style={{ right: "8%", top: "16%" }} />
+              <MapBuilding icon={game.shopRepaired ? "🔧" : "🏚️"} title={game.shopRepaired ? "Repair Shop" : "Broken Shop"} style={{ left: "6%", top: "14%" }} />
+              <MapBuilding icon="🛣️" title="Main Road" style={{ left: "28%", top: "12%" }} />
+              <MapBuilding icon="🚨" title="Call Spot" style={{ right: "29%", top: "12%" }} />
+              <MapBuilding icon="🏡" title="Future House" style={{ right: "8%", top: "16%" }} />
               <MapBuilding icon="🌍" title="Expansion" style={{ right: "10%", bottom: "9%" }} />
               <div style={styles.road} />
               <div style={styles.roadMark1} />
@@ -1860,7 +1898,7 @@ export default function Home() {
 
               {game.activeJobs.map((job, index) => (
                 <div key={job.jobId} style={{ ...styles.vehicleMove, left: `${vehiclePosition(job)}%`, top: `${58 + index * 7}%` }}>
-                  <Pickup />
+                  {job.vehicleName === "Walking" ? <div style={styles.walker}>🚶</div> : <Pickup />}
                   <div style={styles.vehicleLabel}>{job.technicianName}</div>
                 </div>
               ))}
@@ -1872,13 +1910,19 @@ export default function Home() {
           <Panel>
             <Top
               title="🚨 Service Calls"
-              text="Jobs are always available in every weather. Weather only affects travel time, repair time, return time, rating and accident risk."
+              text="After shop repair, jobs are always available. Weather affects travel, repair and return time only."
               action={
                 <button style={styles.darkButton} onClick={() => setCalls(makeCalls(game))}>
                   Refresh Calls
                 </button>
               }
             />
+
+            {!game.shopRepaired && (
+              <div style={styles.warn}>
+                No service calls yet. Go to Town and repair the broken shop for free first.
+              </div>
+            )}
 
             <div style={styles.eventStrip}>
               <span>
@@ -1937,7 +1981,7 @@ export default function Home() {
                           style={tech.skill === call.skill || tech.skill === "All-Rounder" ? styles.greenButton : styles.orangeButton}
                           onClick={() => dispatch(call, tech.id)}
                         >
-                          Send {tech.name} {tech.assignedAreaId === call.areaId ? "📍" : ""}
+                          Send {tech.name} {game.vehicles.find((v) => v.assignedTechnicianId === tech.id)?.icon || "🚶"}
                         </button>
                       ))
                     )}
@@ -1950,7 +1994,7 @@ export default function Home() {
 
         {tab === "jobs" && (
           <Panel>
-            <Top title="⏱️ Active Jobs" text="Weather affects travel, repair and return timing. Jobs are never blocked by weather." />
+            <Top title="⏱️ Active Jobs" text="Owner starts by walking. Bike unlocks Level 2. Pickup unlocks Level 3. Weather affects timing only." />
 
             <div style={styles.cards}>
               {game.activeJobs.length === 0 ? (
@@ -1969,9 +2013,11 @@ export default function Home() {
                         <span style={styles.timer}>{job.pendingMiniGame ? "Mini" : job.pendingApproval ? "Approval" : job.needsSupport ? "Backup" : time(job.phaseRemaining)}</span>
                       </div>
                       <p>Technician: {job.technicianName}</p>
-                      <p>Vehicle: {job.vehicleName}</p>
+                      <p>Travel Mode: {job.vehicleIcon || "🚶"} {job.vehicleName}</p>
                       <p>Location: {job.mapPoint}</p>
-                      <p>Travel: {time(job.travelTime)} • Repair: {time(job.repairTime)} • Return: {time(job.returnTime)}</p>
+                      <p>
+                        Travel: {time(job.travelTime)} • Repair: {time(job.repairTime)} • Return: {time(job.returnTime)}
+                      </p>
                       <p style={styles.phase}>{job.pendingMiniGame ? `Mini-game: ${job.miniGame}` : job.pendingApproval ? "Waiting for extra issue approval" : job.needsSupport ? "Backup required" : job.phase}</p>
                       {job.issueText && <div style={styles.warn}>{job.issueText}</div>}
                       <Bar value={progress} />
@@ -2081,14 +2127,14 @@ export default function Home() {
                   <Meter label="Loyalty" value={tech.loyalty} color="#a855f7" />
 
                   <div style={styles.pickupBox}>
-                    <b>Pickup Equipment</b>
+                    <b>Equipment</b>
                     {availableParts.slice(0, 10).map((p) => (
                       <span key={p.name}>
                         {p.icon} {p.name}: {tech.pickupEquipment[p.name] || 0}
                       </span>
                     ))}
                     <button style={styles.lightButton} onClick={() => loadPickup(tech.id)}>
-                      Load Pickup
+                      Load Equipment
                     </button>
                   </div>
 
@@ -2114,7 +2160,7 @@ export default function Home() {
                       Train
                     </button>
                     <button style={styles.orangeButton} onClick={() => upgradeTruck(tech.id)}>
-                      Upgrade Pickup
+                      Upgrade Pickup Skill
                     </button>
                     <button style={styles.darkButton} onClick={() => changeUniform(tech.id)}>
                       Uniform
@@ -2162,7 +2208,7 @@ export default function Home() {
 
         {tab === "garage" && (
           <Panel>
-            <Top title="🏚️ Garage Interior" text="Prototype garage screen. Later we turn this into 3D interior with walking characters and repair animations." />
+            <Top title="🏚️ Garage Interior" text="Owner starts on foot. Service Bike unlocks Level 2. White/Red Pickup unlocks Level 3." />
 
             <div style={styles.garage}>
               <GarageZone icon="👑" title="Owner Desk" text={game.ownerName} />
@@ -2170,11 +2216,12 @@ export default function Home() {
               <GarageZone icon="📦" title="Parts Shelf" text={`${inventoryUsed(game.parts)}/${storageCapacity(game)}`} />
               <GarageZone icon="🔧" title="Repair Bay" text={`${game.activeJobs.length} active jobs`} />
               <GarageZone icon="🚗" title="Vehicle Bay" text={`${game.vehicles.length} vehicles`} />
-              <GarageZone icon="⬆️" title="Upgrade Station" text="Tools, trucks, insurance" />
+              <GarageZone icon="🚶" title="Current Start" text={game.vehicles.length ? "Vehicle available" : "Owner walking"} />
             </div>
 
-            <h3>Vehicles</h3>
+            <h3>Your Vehicles</h3>
             <div style={styles.cards}>
+              {game.vehicles.length === 0 && <div style={styles.empty}>No vehicle yet. Owner walks to starter jobs. Buy Service Bike at Level 2.</div>}
               {game.vehicles.map((v) => (
                 <Card key={v.id}>
                   <div style={styles.cardIcon}>{v.icon}</div>
@@ -2207,7 +2254,7 @@ export default function Home() {
                     Speed {v.speed} • Storage {v.storage} • Fuel/use {v.fuel}
                   </p>
                   <button style={game.level >= v.unlock ? styles.greenButton : styles.lockedButton} onClick={() => buyVehicle(v)}>
-                    Buy Vehicle
+                    {game.level >= v.unlock ? "Buy Vehicle" : `Locked Until L${v.unlock}`}
                   </button>
                 </Card>
               ))}
@@ -2522,9 +2569,12 @@ export default function Home() {
             <h3>Achievements</h3>
             <div style={styles.cards}>
               {[
+                ["shop-repair", "Shop Repaired"],
                 ["first-repair", "First Repair"],
                 ["ten-jobs", "10 Jobs Completed"],
                 ["hundred-jobs", "100 Jobs Completed"],
+                ["first-bike", "First Service Bike"],
+                ["first-pickup", "First Pickup"],
                 ["first-tech", "First Technician Hired"],
                 ["first-contract", "First Contract Signed"],
                 ["hospital-built", "Healthcare Builder"],
@@ -2675,6 +2725,7 @@ function GarageZone({ icon, title, text }) {
 function urgencyStyle(urgency) {
   const base = { borderRadius: 999, padding: "6px 10px", fontWeight: 900, fontSize: 12 };
 
+  if (urgency === "Starter") return { ...base, background: "#fef3c7", color: "#92400e" };
   if (urgency === "Government") return { ...base, background: "#e0e7ff", color: "#3730a3" };
   if (urgency === "Critical") return { ...base, background: "#fee2e2", color: "#991b1b" };
   if (urgency === "High") return { ...base, background: "#ffedd5", color: "#9a3412" };
@@ -2789,11 +2840,13 @@ const styles = {
     padding: 14,
     fontWeight: 800,
     lineHeight: 1.4,
+    marginBottom: 12,
   },
   statLine: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10, marginBottom: 18 },
   mini: { background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 16, padding: 12 },
   tileGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(135px, 1fr))", gap: 12, marginBottom: 18 },
   tile: { background: "#fffaf5", border: "1px solid #fed7aa", borderRadius: 18, padding: 12, display: "grid", gap: 4, textAlign: "center" },
+  tileBroken: { background: "#fee2e2", border: "2px solid #ef4444", borderRadius: 18, padding: 12, display: "grid", gap: 4, textAlign: "center" },
   tileBuilding: { background: "#fef3c7", border: "1px solid #f59e0b", borderRadius: 18, padding: 12, display: "grid", gap: 4, textAlign: "center" },
   tileRibbon: { background: "#ecfccb", border: "2px solid #84cc16", borderRadius: 18, padding: 12, display: "grid", gap: 4, textAlign: "center" },
   tileIcon: { fontSize: 34 },
@@ -2841,7 +2894,7 @@ const styles = {
   ownedButton: { background: "#dcfce7", color: "#166534", border: "none", borderRadius: 12, padding: "10px 14px", fontWeight: 900, cursor: "not-allowed", margin: 4 },
   darkFullButton: { width: "100%", background: "#1c1917", color: "white", border: "none", borderRadius: 16, padding: "13px 14px", fontWeight: 900, cursor: "pointer", marginTop: 12 },
   lockedFullButton: { width: "100%", background: "#e7e5e4", color: "#78716c", border: "none", borderRadius: 16, padding: "13px 14px", fontWeight: 900, cursor: "pointer" },
-  warn: { background: "#fee2e2", color: "#991b1b", borderRadius: 12, padding: 10, fontWeight: 900, fontSize: 14, marginTop: 8 },
+  warn: { background: "#fee2e2", color: "#991b1b", borderRadius: 12, padding: 10, fontWeight: 900, fontSize: 14, marginTop: 8, marginBottom: 8 },
   tip: { background: "#ecfccb", color: "#365314", border: "1px solid #bef264", borderRadius: 14, padding: 12, marginBottom: 14, fontWeight: 800 },
   eventStrip: { background: "#eef2ff", border: "1px solid #c7d2fe", borderRadius: 18, padding: 12, display: "grid", gap: 6, marginBottom: 14, color: "#3730a3" },
   empty: { border: "1px dashed #d6d3d1", borderRadius: 18, padding: 18, color: "#78716c", background: "#fafaf9" },
@@ -2869,6 +2922,7 @@ const styles = {
   mapBuildingIcon: { fontSize: 34 },
   vehicleMove: { position: "absolute", zIndex: 5, transition: "left 0.6s linear, top 0.6s linear", transform: "translate(-50%, -50%)" },
   vehicleLabel: { marginTop: 4, background: "#1c1917", color: "white", borderRadius: 99, padding: "4px 8px", fontSize: 11, fontWeight: 900, whiteSpace: "nowrap", textAlign: "center" },
+  walker: { fontSize: 42, filter: "drop-shadow(0 8px 8px rgba(0,0,0,0.35))" },
   pickup: { position: "relative", width: 104, height: 52, filter: "drop-shadow(0 12px 10px rgba(0,0,0,0.35))" },
   pickupShadow: { position: "absolute", left: 8, right: 8, bottom: 0, height: 12, background: "rgba(0,0,0,0.28)", borderRadius: "50%", filter: "blur(5px)" },
   pickupBed: { position: "absolute", left: 4, bottom: 13, width: 48, height: 24, background: "linear-gradient(180deg, #ffffff, #e7e5e4)", border: "3px solid #991b1b", borderRadius: "8px 4px 4px 8px" },
