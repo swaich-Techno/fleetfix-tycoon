@@ -2,15 +2,63 @@
 
 import { useEffect, useState } from "react";
 
-const SAVE_KEY = "fleetfix-v13-full";
+const SAVE_KEY = "fleetfix-v14-weather-fixed";
 
 const WEATHER = [
-  { name: "Clear Day", icon: "☀️", travel: 1, accident: 1, text: "Normal work day." },
-  { name: "Rain", icon: "🌧️", travel: 1.15, accident: 1.1, text: "Travel is slower. Electrical issues increase." },
-  { name: "Storm", icon: "⛈️", travel: 1.25, accident: 1.25, text: "Emergency calls increase. Accident risk is higher." },
-  { name: "Heatwave", icon: "🔥", travel: 1.05, accident: 1.05, text: "Engine heating and generator calls increase." },
-  { name: "Winter Morning", icon: "❄️", travel: 1.12, accident: 1.1, text: "Battery and starting problems increase." },
-  { name: "Fog", icon: "🌫️", travel: 1.2, accident: 1.2, text: "Travel is slow and risky." },
+  {
+    name: "Clear Day",
+    icon: "☀️",
+    travel: 1,
+    repair: 1,
+    accident: 1,
+    rating: 0.1,
+    text: "Perfect service day. Normal travel, normal repair time, customer rating +0.1.",
+  },
+  {
+    name: "Rain",
+    icon: "🌧️",
+    travel: 1.15,
+    repair: 1.06,
+    accident: 1.1,
+    rating: 0,
+    text: "Travel is slower and repair takes slightly longer.",
+  },
+  {
+    name: "Storm",
+    icon: "⛈️",
+    travel: 1.25,
+    repair: 1.12,
+    accident: 1.25,
+    rating: 0,
+    text: "Travel is slow, repair takes longer, and accident risk is higher.",
+  },
+  {
+    name: "Heatwave",
+    icon: "🔥",
+    travel: 1.05,
+    repair: 1.1,
+    accident: 1.05,
+    rating: 0,
+    text: "Repair work takes longer because of heat.",
+  },
+  {
+    name: "Winter Morning",
+    icon: "❄️",
+    travel: 1.12,
+    repair: 1.08,
+    accident: 1.1,
+    rating: 0,
+    text: "Travel and repair work are slower because of cold conditions.",
+  },
+  {
+    name: "Fog",
+    icon: "🌫️",
+    travel: 1.2,
+    repair: 1.04,
+    accident: 1.2,
+    rating: 0,
+    text: "Travel is slow and risky. Repair time is slightly affected.",
+  },
 ];
 
 const EVENTS = [
@@ -246,6 +294,7 @@ function pickupEquipment() {
 
 function createTechnician(name, isOwner = false, areaId = "area-1") {
   const trait = isOwner ? TRAITS[0] : pick(TRAITS);
+
   return {
     id: newId(),
     name,
@@ -270,6 +319,7 @@ function createTechnician(name, isOwner = false, areaId = "area-1") {
 
 function newGame(companyName, ownerName, townName, countryName) {
   const owner = createTechnician(ownerName, true);
+
   return {
     started: true,
     companyName,
@@ -359,9 +409,13 @@ function newGame(companyName, ownerName, townName, countryName) {
 }
 
 function normalizeGame(game) {
-  const safe = { ...newGame(game.companyName || "FleetFix", game.ownerName || "Owner", game.townName || "Starter Town", game.countryName || "Repair Nation"), ...game };
+  const safe = {
+    ...newGame(game.companyName || "FleetFix", game.ownerName || "Owner", game.townName || "Starter Town", game.countryName || "Repair Nation"),
+    ...game,
+  };
+
   safe.parts = { ...startParts(), ...(game.parts || {}) };
-  safe.weather = game.weather || WEATHER[0];
+  safe.weather = game.weather?.repair ? game.weather : WEATHER[0];
   safe.dailyMissions = game.dailyMissions?.length ? game.dailyMissions : createDailyMissions();
   safe.insurance = { technicians: false, vehicles: false, parts: false, ...(game.insurance || {}) };
   safe.activeJobs = [];
@@ -373,6 +427,7 @@ function normalizeGame(game) {
     currentJobId: null,
     pickupEquipment: { ...pickupEquipment(), ...(t.pickupEquipment || {}) },
   }));
+
   return safe;
 }
 
@@ -390,6 +445,7 @@ function completedBuildings(game, type) {
 
 function townHappiness(game) {
   const base = 40;
+
   const buildingPoints = game.worldAreas.reduce((sum, area) => {
     return sum + area.tiles.reduce((s, tile) => {
       if (tile.status !== "complete") return s;
@@ -397,11 +453,13 @@ function townHappiness(game) {
       return s + (data?.happiness || 1);
     }, 0);
   }, 0);
+
   const completeCount = game.worldAreas.reduce((sum, area) => sum + area.tiles.filter((t) => t.status === "complete").length, 0);
   const roadNeed = Math.ceil(completeCount / 3);
-  const roadPenalty = Math.max(0, roadNeed - completedBuildings(game, "Road")) * 5;
+  const roadPenaltyValue = Math.max(0, roadNeed - completedBuildings(game, "Road")) * 5;
   const salaryPenalty = game.salaryDue > 0 ? 3 : 0;
-  return Math.max(0, Math.min(100, base + buildingPoints - roadPenalty - salaryPenalty));
+
+  return Math.max(0, Math.min(100, base + buildingPoints - roadPenaltyValue - salaryPenalty));
 }
 
 function roadPenalty(game) {
@@ -427,6 +485,7 @@ function maxTechnicians(game) {
 
 function servicePoints(game) {
   const area = getActiveArea(game);
+
   const points = [
     `${area.name} Main Road`,
     `${area.name} Service Yard`,
@@ -453,19 +512,7 @@ function servicePoints(game) {
 }
 
 function makeCalls(game) {
-  let availableJobs = JOBS.filter((j) => j.unlock <= game.level);
-
-  if (["Rain", "Storm", "Winter Morning"].includes(game.weather?.name)) {
-    availableJobs = [...availableJobs, ...availableJobs.filter((j) => j.skill === "Electrical")];
-  }
-
-  if (game.weather?.name === "Heatwave") {
-    availableJobs = [...availableJobs, ...availableJobs.filter((j) => j.skill === "Engine")];
-  }
-
-  if (game.festivalEvent?.name === "Inspection Week") {
-    availableJobs = [...availableJobs, ...availableJobs.filter((j) => j.skill === "Inspection" || j.title.includes("Inspection"))];
-  }
+  const availableJobs = JOBS.filter((j) => j.unlock <= game.level);
 
   const points = servicePoints(game);
   const area = getActiveArea(game);
@@ -477,7 +524,14 @@ function makeCalls(game) {
       const point = points[(game.day + index + Math.floor(Math.random() * points.length)) % points.length];
       const noPay = Math.random() < (game.day % 17 === 0 || game.day % 30 === 0 ? 0.16 : 0.02);
       const eventBonus = game.festivalEvent?.bonus || 1;
-      const customerBonus = template.customer === "Government" ? 1.25 : template.customer === "Fleet" ? 1.12 : template.customer === "Emergency" ? 1.2 : 1;
+      const customerBonus =
+        template.customer === "Government"
+          ? 1.25
+          : template.customer === "Fleet"
+          ? 1.12
+          : template.customer === "Emergency"
+          ? 1.2
+          : 1;
 
       return {
         id: newId(),
@@ -544,6 +598,7 @@ function contracts(level) {
 
 function contractBonus(game) {
   const data = contracts(game.level);
+
   return game.signedContracts.reduce(
     (sum, id) => {
       const c = data.find((x) => x.id === id);
@@ -572,6 +627,7 @@ function nextAreaName(game) {
     "Sunrise Plains",
     "Global Hub",
   ];
+
   return names[game.worldAreas.length - 1] || `World Area ${game.worldAreas.length + 1}`;
 }
 
@@ -606,26 +662,34 @@ function time(seconds) {
 
 function toolBonus(game, call) {
   let bonus = 1;
+
   TOOLS.forEach((tool) => {
     if ((game.tools[tool.name] || 0) > 0 && (tool.skill === call.skill || tool.skill === "All")) {
       bonus *= tool.bonus;
     }
   });
+
   return bonus;
 }
 
 function ratingFor(job, tech, game) {
   let rating = 3.2;
+
   if (job.skillMatch) rating += 0.6;
   if (tech?.energy > 50) rating += 0.3;
   if (tech?.morale > 70) rating += 0.2;
+
   rating += tech?.trait?.rating || 0;
+  rating += game.weather?.rating || 0;
+
   if (job.approvedExtraIssue) rating += 0.25;
   if (job.declinedExtraIssue) rating -= 0.35;
   if (job.miniGameBonus) rating += 0.25;
   if (job.noPay) rating += 0.15;
   if (townHappiness(game) >= 70) rating += 0.2;
+
   rating -= roadPenalty(game) * 0.12;
+
   return Math.max(1, Math.min(5, rating));
 }
 
@@ -641,9 +705,11 @@ function vehiclePosition(job) {
   const total = job.phaseTotal || 1;
   const done = total - job.phaseRemaining;
   const progress = Math.max(0, Math.min(1, done / total));
+
   if (job.phase === "travel") return 10 + progress * 55;
   if (job.phase === "repair") return 65;
   if (job.phase === "return") return 65 - progress * 55;
+
   return 10;
 }
 
@@ -662,6 +728,7 @@ export default function Home() {
 
   useEffect(() => {
     const saved = localStorage.getItem(SAVE_KEY);
+
     if (saved) {
       const parsed = normalizeGame(JSON.parse(saved));
       setGame(parsed);
@@ -687,17 +754,21 @@ export default function Home() {
           ...area,
           tiles: area.tiles.map((tile) => {
             if (tile.status !== "building") return tile;
+
             const remaining = Math.max(0, tile.remaining - 1);
+
             if (remaining <= 0) {
               notes.push(`${tile.type} construction finished. Cut the ribbon to open it.`);
               return { ...tile, remaining: 0, status: "readyRibbon" };
             }
+
             return { ...tile, remaining };
           }),
         }));
 
         if (g.dayTimer <= 0) {
           const salaryDue = g.technicians.reduce((sum, t) => sum + salaryFor(t.level, t.isOwner), 0);
+
           g.day += 1;
           g.dayTimer = 180;
           g.salaryDue += salaryDue;
@@ -709,12 +780,15 @@ export default function Home() {
               const days = Math.max(0, t.hospitalDays - 1);
               return { ...t, hospitalDays: days, status: days <= 0 ? "Free" : "Hospital", energy: days <= 0 ? 80 : t.energy };
             }
+
             if (t.status === "Day Off") {
               return { ...t, status: "Free", morale: Math.min(100, t.morale + 14), loyalty: Math.min(100, t.loyalty + 3) };
             }
+
             if (!t.isOwner && g.salaryDue > 0) {
               return { ...t, morale: Math.max(35, t.morale - 3), loyalty: Math.max(0, t.loyalty - 2) };
             }
+
             return t;
           });
 
@@ -732,6 +806,7 @@ export default function Home() {
 
         g.technicians.forEach((tech) => {
           const chance = townHappiness(g) > 70 ? 0.0007 : 0.0015;
+
           if (!tech.isOwner && tech.status === "Free" && !g.dayOffRequests.some((r) => r.technicianId === tech.id) && Math.random() < chance) {
             const request = {
               id: newId(),
@@ -744,6 +819,7 @@ export default function Home() {
                 "I need one rest day because of personal plans.",
               ]),
             };
+
             g.dayOffRequests = [...g.dayOffRequests, request];
             setDayOffPopup(request);
           }
@@ -779,7 +855,9 @@ export default function Home() {
         const tech = g.technicians.find((t) => t.id === job.technicianId);
         const backupAvailable = g.technicians.some((t) => t.id !== job.technicianId && t.status === "Free" && t.energy > 0);
 
-        const issueChance = (job.urgency === "Critical" ? 0.035 : job.urgency === "High" ? 0.022 : 0.012) * (tech?.trait?.issue || 1);
+        const issueChance =
+          (job.urgency === "Critical" ? 0.035 : job.urgency === "High" ? 0.022 : 0.012) *
+          (tech?.trait?.issue || 1);
 
         if (job.phase === "repair" && !job.extraIssueChecked && Math.random() < issueChance) {
           if ((tech?.energy || 100) < 20 && backupAvailable) {
@@ -788,6 +866,7 @@ export default function Home() {
           }
 
           notes.push(`${job.technicianName} reported an extra issue on ${job.title}.`);
+
           return {
             ...job,
             extraIssueChecked: true,
@@ -834,6 +913,7 @@ export default function Home() {
         const rating = ratingFor(job, tech, g);
         const stars = "⭐".repeat(Math.max(1, Math.round(rating)));
         const bonus = contractBonus(g);
+
         const coinEarned = Math.round(job.rewardCoins * (1 + bonus.coin / 100));
         const moneyEarned = Math.round(job.rewardMoney * (1 + bonus.money / 100));
 
@@ -847,6 +927,7 @@ export default function Home() {
         g.totalRevenue += coinEarned;
         g.worldValue += Math.floor(coinEarned * 0.12);
         g.dailyMissions = updateMission(g.dailyMissions, "job");
+
         if (rating >= 4.5) g.dailyMissions = updateMission(g.dailyMissions, "rating");
 
         const accidentChance =
@@ -864,7 +945,16 @@ export default function Home() {
             const medicalCost = Math.round((job.urgency === "Critical" ? 160 : 90) * (g.insurance.technicians ? 0.35 : 1));
             g.coins = Math.max(0, g.coins - medicalCost);
             notes.push(`${t.name} had a minor incident and went to clinic for 2 days. Medical cost: ${medicalCost} coins.`);
-            return { ...t, status: "Hospital", hospitalDays: 2, energy: 20, morale: Math.max(40, t.morale - 8), loyalty: Math.max(0, t.loyalty - 3), currentJobId: null };
+
+            return {
+              ...t,
+              status: "Hospital",
+              hospitalDays: 2,
+              energy: 20,
+              morale: Math.max(40, t.morale - 8),
+              loyalty: Math.max(0, t.loyalty - 3),
+              currentJobId: null,
+            };
           }
 
           let newLevel = t.level;
@@ -890,6 +980,7 @@ export default function Home() {
 
         notes.push(`${tech?.name || "Technician"} completed ${job.title}. Rating ${stars}. Earned 🪙 ${coinEarned}, 💵 ${moneyEarned}.`);
         setReview({ stars, text: reviewText(rating, job) });
+
         return false;
       });
 
@@ -918,6 +1009,7 @@ export default function Home() {
 
     const pickupStock = tech.pickupEquipment?.[call.partNeeded] || 0;
     const shopStock = game.parts[call.partNeeded] || 0;
+
     let newParts = { ...game.parts };
     let newPickup = { ...tech.pickupEquipment };
 
@@ -926,21 +1018,27 @@ export default function Home() {
         newPickup[call.partNeeded] = pickupStock - call.partQty;
       } else {
         const missing = call.partQty - pickupStock;
+
         if (shopStock < missing) {
           setTab("market");
           return setMessage(`Not enough ${call.partNeeded}. Buy parts first.`);
         }
+
         newParts[call.partNeeded] = shopStock - missing;
         newPickup[call.partNeeded] = 0;
       }
     }
 
     const skillMatch = tech.skill === call.skill || tech.skill === "All-Rounder";
+
     const weatherTravel = game.weather?.travel || 1;
+    const weatherRepair = game.weather?.repair || 1;
+
     const areaBonus = tech.assignedAreaId === call.areaId ? 0.78 : 1;
     const road = 1 + roadPenalty(game) * 0.08;
+
     const travelTime = Math.max(4, Math.floor(call.travel * weatherTravel * areaBonus * tech.trait.travel * road / vehicle.speed));
-    const repairTime = Math.max(8, Math.floor(call.repair * (skillMatch ? 0.7 : 1) * tech.trait.repair * toolBonus(game, call)));
+    const repairTime = Math.max(8, Math.floor(call.repair * weatherRepair * (skillMatch ? 0.7 : 1) * tech.trait.repair * toolBonus(game, call)));
     const returnTime = Math.max(4, Math.floor(call.back * weatherTravel * areaBonus * tech.trait.travel * road / vehicle.speed));
 
     const activeJob = {
@@ -979,7 +1077,7 @@ export default function Home() {
 
     setCalls((old) => old.filter((c) => c.id !== call.id));
     setTab("jobs");
-    setMessage(`${tech.name} dispatched to ${call.mapPoint}. Mini-game ready: ${call.miniGame}.`);
+    setMessage(`${tech.name} dispatched to ${call.mapPoint}. Weather affects time only. Mini-game ready: ${call.miniGame}.`);
   }
 
   function completeMiniGame(jobId, success) {
@@ -1057,6 +1155,7 @@ export default function Home() {
     if (game.coins < b.costCoins || game.money < b.costMoney) return setMessage(`Need 🪙 ${b.costCoins} and 💵 ${b.costMoney}.`);
 
     const finalTime = Math.ceil(b.buildTime * (roadPenalty(game) > 0 ? 1.1 + roadPenalty(game) * 0.05 : 1));
+
     const tile = {
       id: newId(),
       type: b.type,
@@ -1097,9 +1196,7 @@ export default function Home() {
             }
           : area
       ),
-      worldValue:
-        g.worldValue +
-        (g.worldAreas.find((a) => a.id === areaId)?.tiles.find((t) => t.id === tileId)?.value || 0),
+      worldValue: g.worldValue + (g.worldAreas.find((a) => a.id === areaId)?.tiles.find((t) => t.id === tileId)?.value || 0),
     }));
 
     if (opened) {
@@ -1140,6 +1237,7 @@ export default function Home() {
 
     PARTS.filter((p) => p.unlockLevel <= game.level).forEach((p) => {
       const stock = next[p.name] || 0;
+
       if (stock < p.reorder) {
         const add = p.reorder - stock;
         qty += add;
@@ -1166,6 +1264,7 @@ export default function Home() {
       const need = Math.max(0, (target[p.name] || 0) - (equipment[p.name] || 0));
       const available = parts[p.name] || 0;
       const loading = Math.min(need, available);
+
       if (loading > 0) {
         parts[p.name] -= loading;
         equipment[p.name] = (equipment[p.name] || 0) + loading;
@@ -1181,6 +1280,7 @@ export default function Home() {
 
   function hireTechnician() {
     if (game.level < 5) return setMessage("First technician unlocks at Level 5.");
+
     if (game.technicians.length >= maxTechnicians(game)) {
       return setMessage(game.level < 21 ? "Level 5–20 allows owner + first technician only." : "New technician slot unlocks every 10 levels after Level 21.");
     }
@@ -1202,6 +1302,7 @@ export default function Home() {
   function trainTech(id) {
     const tech = game.technicians.find((t) => t.id === id);
     const cost = 60 + tech.level * 12;
+
     if (game.money < cost) return setMessage(`Training needs ${cost} money.`);
 
     setGame((g) => ({
@@ -1219,6 +1320,7 @@ export default function Home() {
   function upgradeTruck(id) {
     const tech = game.technicians.find((t) => t.id === id);
     const cost = 90 + tech.truckLevel * 75;
+
     if (game.money < cost) return setMessage(`Truck upgrade needs ${cost} money.`);
 
     setGame((g) => ({
@@ -1230,6 +1332,7 @@ export default function Home() {
 
   function changeUniform(id) {
     const uniforms = ["Classic Red", "Blue Pro", "Safety Yellow", "Black Elite", "Green Eco"];
+
     setGame((g) => ({
       ...g,
       technicians: g.technicians.map((t) => {
@@ -1405,9 +1508,11 @@ export default function Home() {
 
   function addParts(parts, add) {
     const next = { ...parts };
+
     Object.entries(add).forEach(([key, value]) => {
       next[key] = (next[key] || 0) + value;
     });
+
     return next;
   }
 
@@ -1461,6 +1566,7 @@ export default function Home() {
   function addFriend() {
     const available = FRIENDS.filter((f) => !game.friends.includes(f));
     if (!available.length) return setMessage("No more suggested friends.");
+
     const friend = pick(available);
     setGame((g) => ({ ...g, friends: [...g.friends, friend] }));
   }
@@ -1574,7 +1680,9 @@ export default function Home() {
 
           {message && <div style={styles.message}>📢 {message}</div>}
 
-          <button style={styles.mainButton} onClick={startGame}>Start Repair Empire</button>
+          <button style={styles.mainButton} onClick={startGame}>
+            Start Repair Empire
+          </button>
         </section>
       </main>
     );
@@ -1593,7 +1701,9 @@ export default function Home() {
           <h3>⭐ Customer Review</h3>
           <div style={styles.bigStars}>{review.stars}</div>
           <p>{review.text}</p>
-          <button style={styles.mainButtonSmall} onClick={() => setReview(null)}>Nice</button>
+          <button style={styles.mainButtonSmall} onClick={() => setReview(null)}>
+            Nice
+          </button>
         </Overlay>
       )}
 
@@ -1601,8 +1711,24 @@ export default function Home() {
         <Overlay>
           <h3>💭 {dayOffPopup.technicianName} asks for day off</h3>
           <p>{dayOffPopup.reason}</p>
-          <button style={styles.greenButton} onClick={() => { approveDayOff(dayOffPopup.id); setDayOffPopup(null); }}>Approve</button>
-          <button style={styles.dangerButton} onClick={() => { denyDayOff(dayOffPopup.id); setDayOffPopup(null); }}>Deny</button>
+          <button
+            style={styles.greenButton}
+            onClick={() => {
+              approveDayOff(dayOffPopup.id);
+              setDayOffPopup(null);
+            }}
+          >
+            Approve
+          </button>
+          <button
+            style={styles.dangerButton}
+            onClick={() => {
+              denyDayOff(dayOffPopup.id);
+              setDayOffPopup(null);
+            }}
+          >
+            Deny
+          </button>
         </Overlay>
       )}
 
@@ -1610,8 +1736,12 @@ export default function Home() {
         <Overlay>
           <div style={styles.ribbonEmoji}>🎀✂️</div>
           <h2>Ribbon Cutting!</h2>
-          <p>{ribbon.icon} {ribbon.type} is now open.</p>
-          <button style={styles.mainButtonSmall} onClick={() => setRibbon(null)}>Open</button>
+          <p>
+            {ribbon.icon} {ribbon.type} is now open.
+          </p>
+          <button style={styles.mainButtonSmall} onClick={() => setRibbon(null)}>
+            Open
+          </button>
         </Overlay>
       )}
 
@@ -1621,7 +1751,9 @@ export default function Home() {
           <p style={styles.smallText}>
             Owner: {game.ownerName} • Country: {game.countryName} • Area: {active.name}
           </p>
-          <p style={styles.rank}>🏆 {rank(game.reputation)} • ⭐ {averageRating(game).toFixed(1)} Rating • 😊 {townHappiness(game)} Happiness</p>
+          <p style={styles.rank}>
+            🏆 {rank(game.reputation)} • ⭐ {averageRating(game).toFixed(1)} Rating • 😊 {townHappiness(game)} Happiness
+          </p>
         </div>
 
         <div style={styles.statsGrid}>
@@ -1650,7 +1782,15 @@ export default function Home() {
 
         {tab === "town" && (
           <Panel>
-            <Top title={`🏙️ ${active.name}`} text="Township-style construction, roads, builder teams, ribbon cutting, happiness and family support." action={<button style={styles.dangerButton} onClick={resetGame}>Reset</button>} />
+            <Top
+              title={`🏙️ ${active.name}`}
+              text="Township-style construction, roads, builder teams, ribbon cutting, happiness and family support."
+              action={
+                <button style={styles.dangerButton} onClick={resetGame}>
+                  Reset
+                </button>
+              }
+            />
 
             <div style={styles.statLine}>
               <Mini label="World Value" value={`🏙️ ${game.worldValue}`} />
@@ -1663,6 +1803,7 @@ export default function Home() {
             <div style={styles.tileGrid}>
               {active.tiles.map((tile) => {
                 const progress = tile.status === "building" ? Math.round(100 - (tile.remaining / tile.totalTime) * 100) : 100;
+
                 return (
                   <div key={tile.id} style={tile.status === "building" ? styles.tileBuilding : tile.status === "readyRibbon" ? styles.tileRibbon : styles.tile}>
                     <div style={styles.tileIcon}>{tile.icon}</div>
@@ -1674,7 +1815,11 @@ export default function Home() {
                         <Bar value={progress} />
                       </>
                     )}
-                    {tile.status === "readyRibbon" && <button style={styles.greenButton} onClick={() => cutRibbon(active.id, tile.id)}>🎀 Cut Ribbon</button>}
+                    {tile.status === "readyRibbon" && (
+                      <button style={styles.greenButton} onClick={() => cutRibbon(active.id, tile.id)}>
+                        🎀 Cut Ribbon
+                      </button>
+                    )}
                     {tile.status === "complete" && <small>Open</small>}
                   </div>
                 );
@@ -1688,8 +1833,12 @@ export default function Home() {
                   <div style={styles.cardIcon}>{b.icon}</div>
                   <h3>{b.type}</h3>
                   <p>{b.description}</p>
-                  <p>Unlock L{b.unlockLevel} • Time {time(b.buildTime)}</p>
-                  <p>Cost 🪙 {b.costCoins} • 💵 {b.costMoney} • 😊 +{b.happiness}</p>
+                  <p>
+                    Unlock L{b.unlockLevel} • Time {time(b.buildTime)}
+                  </p>
+                  <p>
+                    Cost 🪙 {b.costCoins} • 💵 {b.costMoney} • 😊 +{b.happiness}
+                  </p>
                   <button style={game.level >= b.unlockLevel ? styles.darkButton : styles.lockedButton} onClick={() => buildTile(b)}>
                     Start Construction
                   </button>
@@ -1721,11 +1870,28 @@ export default function Home() {
 
         {tab === "calls" && (
           <Panel>
-            <Top title="🚨 Service Calls" text="Requests include trailers, generators, inspections, trains, ships, aeroplanes, government convoy and warplane ground support." action={<button style={styles.darkButton} onClick={() => setCalls(makeCalls(game))}>Refresh Calls</button>} />
+            <Top
+              title="🚨 Service Calls"
+              text="Jobs are always available in every weather. Weather only affects travel time, repair time, return time, rating and accident risk."
+              action={
+                <button style={styles.darkButton} onClick={() => setCalls(makeCalls(game))}>
+                  Refresh Calls
+                </button>
+              }
+            />
 
             <div style={styles.eventStrip}>
-              <span>{game.weather.icon} Weather: <b>{game.weather.name}</b> — {game.weather.text}</span>
-              {game.festivalEvent && <span>{game.festivalEvent.icon} Event: <b>{game.festivalEvent.name}</b> — {game.festivalEvent.text}</span>}
+              <span>
+                {game.weather.icon} Weather: <b>{game.weather.name}</b> — {game.weather.text}
+              </span>
+              <span>
+                Weather Time Effect: Travel x{game.weather.travel}, Repair x{game.weather.repair}, Accident x{game.weather.accident}
+              </span>
+              {game.festivalEvent && (
+                <span>
+                  {game.festivalEvent.icon} Event: <b>{game.festivalEvent.name}</b> — {game.festivalEvent.text}
+                </span>
+              )}
             </div>
 
             {game.dispatchManager && <div style={styles.tip}>📡 Dispatch Manager Tip: match skill + assigned area + available fuel for best rating.</div>}
@@ -1739,13 +1905,27 @@ export default function Home() {
                   </div>
                   <h3>{call.title}</h3>
                   <p>{call.problem}</p>
-                  <p><b>Customer:</b> {call.customer}</p>
-                  <p><b>Vehicle:</b> {call.vehicle}</p>
-                  <p><b>Location:</b> {call.mapPoint}</p>
-                  <p><b>Skill:</b> {call.skill}</p>
-                  <p><b>Parts:</b> {call.partQty} {call.partNeeded}</p>
-                  <p><b>Mini-game:</b> {call.miniGame}</p>
-                  <p><b>Reward:</b> 🪙 {call.rewardCoins} • 💵 {call.rewardMoney} • XP {call.xp}</p>
+                  <p>
+                    <b>Customer:</b> {call.customer}
+                  </p>
+                  <p>
+                    <b>Vehicle:</b> {call.vehicle}
+                  </p>
+                  <p>
+                    <b>Location:</b> {call.mapPoint}
+                  </p>
+                  <p>
+                    <b>Skill:</b> {call.skill}
+                  </p>
+                  <p>
+                    <b>Parts:</b> {call.partQty} {call.partNeeded}
+                  </p>
+                  <p>
+                    <b>Mini-game:</b> {call.miniGame}
+                  </p>
+                  <p>
+                    <b>Reward:</b> 🪙 {call.rewardCoins} • 💵 {call.rewardMoney} • XP {call.xp}
+                  </p>
 
                   <div style={styles.stack}>
                     {freeTechs.length === 0 ? (
@@ -1770,7 +1950,7 @@ export default function Home() {
 
         {tab === "jobs" && (
           <Panel>
-            <Top title="⏱️ Active Jobs" text="Mini-games are prototype buttons now. Later they become real tap/drag repair actions." />
+            <Top title="⏱️ Active Jobs" text="Weather affects travel, repair and return timing. Jobs are never blocked by weather." />
 
             <div style={styles.cards}>
               {game.activeJobs.length === 0 ? (
@@ -1783,35 +1963,52 @@ export default function Home() {
                   return (
                     <Card key={job.jobId} issue={job.pendingMiniGame || job.pendingApproval || job.needsSupport}>
                       <div style={styles.cardTop}>
-                        <h3>{job.icon} {job.title}</h3>
+                        <h3>
+                          {job.icon} {job.title}
+                        </h3>
                         <span style={styles.timer}>{job.pendingMiniGame ? "Mini" : job.pendingApproval ? "Approval" : job.needsSupport ? "Backup" : time(job.phaseRemaining)}</span>
                       </div>
                       <p>Technician: {job.technicianName}</p>
                       <p>Vehicle: {job.vehicleName}</p>
                       <p>Location: {job.mapPoint}</p>
+                      <p>Travel: {time(job.travelTime)} • Repair: {time(job.repairTime)} • Return: {time(job.returnTime)}</p>
                       <p style={styles.phase}>{job.pendingMiniGame ? `Mini-game: ${job.miniGame}` : job.pendingApproval ? "Waiting for extra issue approval" : job.needsSupport ? "Backup required" : job.phase}</p>
                       {job.issueText && <div style={styles.warn}>{job.issueText}</div>}
                       <Bar value={progress} />
 
                       {job.pendingMiniGame && (
                         <div style={styles.actions}>
-                          <button style={styles.greenButton} onClick={() => completeMiniGame(job.jobId, true)}>Win {job.miniGame}</button>
-                          <button style={styles.orangeButton} onClick={() => completeMiniGame(job.jobId, false)}>Skip</button>
+                          <button style={styles.greenButton} onClick={() => completeMiniGame(job.jobId, true)}>
+                            Win {job.miniGame}
+                          </button>
+                          <button style={styles.orangeButton} onClick={() => completeMiniGame(job.jobId, false)}>
+                            Skip
+                          </button>
                         </div>
                       )}
 
                       {job.pendingApproval && (
                         <div style={styles.actions}>
-                          <button style={styles.greenButton} onClick={() => approveExtra(job.jobId)}>Approve Extra Issue</button>
-                          <button style={styles.dangerButton} onClick={() => declineExtra(job.jobId)}>Decline</button>
+                          <button style={styles.greenButton} onClick={() => approveExtra(job.jobId)}>
+                            Approve Extra Issue
+                          </button>
+                          <button style={styles.dangerButton} onClick={() => declineExtra(job.jobId)}>
+                            Decline
+                          </button>
                         </div>
                       )}
 
                       {job.needsSupport && !job.supportAssigned && (
                         <div style={styles.stack}>
-                          {backups.length === 0 ? <div style={styles.warn}>No backup technician available.</div> : backups.map((t) => (
-                            <button key={t.id} style={styles.greenButton} onClick={() => sendBackup(job.jobId, t.id)}>Send {t.name} as Backup</button>
-                          ))}
+                          {backups.length === 0 ? (
+                            <div style={styles.warn}>No backup technician available.</div>
+                          ) : (
+                            backups.map((t) => (
+                              <button key={t.id} style={styles.greenButton} onClick={() => sendBackup(job.jobId, t.id)}>
+                                Send {t.name} as Backup
+                              </button>
+                            ))
+                          )}
                         </div>
                       )}
                     </Card>
@@ -1824,7 +2021,15 @@ export default function Home() {
 
         {tab === "team" && (
           <Panel>
-            <Top title="👨‍🔧 Technicians" text="L1–4 owner only. L5–20 owner + first technician. L21 unlocks one area + one tech. Then one new tech slot every 10 levels." action={<button style={styles.mainButtonSmall} onClick={paySalaries}>Pay Salaries 🧾 {game.salaryDue}</button>} />
+            <Top
+              title="👨‍🔧 Technicians"
+              text="L1–4 owner only. L5–20 owner + first technician. L21 unlocks one area + one tech. Then one new tech slot every 10 levels."
+              action={
+                <button style={styles.mainButtonSmall} onClick={paySalaries}>
+                  Pay Salaries 🧾 {game.salaryDue}
+                </button>
+              }
+            />
 
             {game.dayOffRequests.length > 0 && (
               <div style={styles.notice}>
@@ -1836,8 +2041,12 @@ export default function Home() {
                       <p>{r.reason}</p>
                     </div>
                     <div>
-                      <button style={styles.greenButton} onClick={() => approveDayOff(r.id)}>Approve</button>
-                      <button style={styles.dangerButton} onClick={() => denyDayOff(r.id)}>Deny</button>
+                      <button style={styles.greenButton} onClick={() => approveDayOff(r.id)}>
+                        Approve
+                      </button>
+                      <button style={styles.dangerButton} onClick={() => denyDayOff(r.id)}>
+                        Deny
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -1849,15 +2058,23 @@ export default function Home() {
                 <Card key={tech.id} blue={tech.status === "Hospital"}>
                   <div style={styles.avatar}>{tech.avatar}</div>
                   <div style={styles.cardTop}>
-                    <h3>{tech.isOwner ? "👑" : "🔧"} {tech.name}</h3>
+                    <h3>
+                      {tech.isOwner ? "👑" : "🔧"} {tech.name}
+                    </h3>
                     <span style={styles.badge}>{tech.status}</span>
                   </div>
                   <p>Skill: {tech.skill}</p>
-                  <p>Trait: {tech.trait.name} — {tech.trait.text}</p>
+                  <p>
+                    Trait: {tech.trait.name} — {tech.trait.text}
+                  </p>
                   <p>Uniform: {tech.uniform}</p>
                   <p>Assigned Area: {game.worldAreas.find((a) => a.id === tech.assignedAreaId)?.name}</p>
-                  <p>Tech Level: {tech.level} • XP {tech.xp}/{techXpNeed(tech.level)}</p>
-                  <p>Salary/day: 🧾 {salaryFor(tech.level, tech.isOwner)} {tech.isOwner ? "(Owner)" : ""}</p>
+                  <p>
+                    Tech Level: {tech.level} • XP {tech.xp}/{techXpNeed(tech.level)}
+                  </p>
+                  <p>
+                    Salary/day: 🧾 {salaryFor(tech.level, tech.isOwner)} {tech.isOwner ? "(Owner)" : ""}
+                  </p>
 
                   <Meter label="Energy" value={tech.energy} color="#16a34a" />
                   <Meter label="Morale" value={tech.morale} color="#2563eb" />
@@ -1865,41 +2082,80 @@ export default function Home() {
 
                   <div style={styles.pickupBox}>
                     <b>Pickup Equipment</b>
-                    {availableParts.slice(0, 10).map((p) => <span key={p.name}>{p.icon} {p.name}: {tech.pickupEquipment[p.name] || 0}</span>)}
-                    <button style={styles.lightButton} onClick={() => loadPickup(tech.id)}>Load Pickup</button>
+                    {availableParts.slice(0, 10).map((p) => (
+                      <span key={p.name}>
+                        {p.icon} {p.name}: {tech.pickupEquipment[p.name] || 0}
+                      </span>
+                    ))}
+                    <button style={styles.lightButton} onClick={() => loadPickup(tech.id)}>
+                      Load Pickup
+                    </button>
                   </div>
 
-                  <select style={styles.input} value={tech.assignedAreaId} onChange={(e) => setGame((g) => ({
-                    ...g,
-                    technicians: g.technicians.map((t) => t.id === tech.id ? { ...t, assignedAreaId: e.target.value } : t),
-                  }))}>
-                    {game.worldAreas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  <select
+                    style={styles.input}
+                    value={tech.assignedAreaId}
+                    onChange={(e) =>
+                      setGame((g) => ({
+                        ...g,
+                        technicians: g.technicians.map((t) => (t.id === tech.id ? { ...t, assignedAreaId: e.target.value } : t)),
+                      }))
+                    }
+                  >
+                    {game.worldAreas.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                      </option>
+                    ))}
                   </select>
 
                   <div style={styles.actions}>
-                    <button style={styles.greenButton} onClick={() => trainTech(tech.id)}>Train</button>
-                    <button style={styles.orangeButton} onClick={() => upgradeTruck(tech.id)}>Upgrade Pickup</button>
-                    <button style={styles.darkButton} onClick={() => changeUniform(tech.id)}>Uniform</button>
+                    <button style={styles.greenButton} onClick={() => trainTech(tech.id)}>
+                      Train
+                    </button>
+                    <button style={styles.orangeButton} onClick={() => upgradeTruck(tech.id)}>
+                      Upgrade Pickup
+                    </button>
+                    <button style={styles.darkButton} onClick={() => changeUniform(tech.id)}>
+                      Uniform
+                    </button>
                   </div>
 
                   {renameId === tech.id ? (
                     <div style={styles.actions}>
                       <input style={styles.input} value={renameValue} onChange={(e) => setRenameValue(e.target.value)} />
-                      <button style={styles.greenButton} onClick={() => {
-                        setGame((g) => ({ ...g, technicians: g.technicians.map((t) => t.id === renameId ? { ...t, name: renameValue } : t) }));
-                        setRenameId("");
-                        setRenameValue("");
-                      }}>Save</button>
+                      <button
+                        style={styles.greenButton}
+                        onClick={() => {
+                          setGame((g) => ({ ...g, technicians: g.technicians.map((t) => (t.id === renameId ? { ...t, name: renameValue } : t)) }));
+                          setRenameId("");
+                          setRenameValue("");
+                        }}
+                      >
+                        Save
+                      </button>
                     </div>
                   ) : (
-                    <button style={styles.lightButton} onClick={() => { setRenameId(tech.id); setRenameValue(tech.name); }}>Rename</button>
+                    <button
+                      style={styles.lightButton}
+                      onClick={() => {
+                        setRenameId(tech.id);
+                        setRenameValue(tech.name);
+                      }}
+                    >
+                      Rename
+                    </button>
                   )}
                 </Card>
               ))}
             </div>
 
             <button style={game.level >= 5 ? styles.darkFullButton : styles.lockedFullButton} onClick={hireTechnician}>
-              {game.level < 5 ? "Hire Technician Locked Until Level 5" : game.technicians.length >= maxTechnicians(game) ? `Technician Limit Reached ${game.technicians.length}/${maxTechnicians(game)}` : `Hire Technician — 🪙 ${700 + game.technicians.length * 350}`}
+              {game.level < 5
+                ? "Hire Technician Locked Until Level 5"
+                : game.technicians.length >= maxTechnicians(game)
+                ? `Technician Limit Reached ${game.technicians.length}/${maxTechnicians(game)}`
+                : `Hire Technician — 🪙 ${700 + game.technicians.length * 350}`}
             </button>
           </Panel>
         )}
@@ -1923,10 +2179,16 @@ export default function Home() {
                 <Card key={v.id}>
                   <div style={styles.cardIcon}>{v.icon}</div>
                   <h3>{v.name}</h3>
-                  <p>Speed {v.speed} • Storage {v.storage} • Fuel/use {v.fuelUse}</p>
+                  <p>
+                    Speed {v.speed} • Storage {v.storage} • Fuel/use {v.fuelUse}
+                  </p>
                   <select style={styles.input} value={v.assignedTechnicianId || ""} onChange={(e) => assignVehicle(v.id, e.target.value)}>
                     <option value="">Unassigned</option>
-                    {game.technicians.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    {game.technicians.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
                   </select>
                 </Card>
               ))}
@@ -1938,9 +2200,15 @@ export default function Home() {
                 <Card key={v.type}>
                   <div style={styles.cardIcon}>{v.icon}</div>
                   <h3>{v.type}</h3>
-                  <p>Unlock L{v.unlock} • 💵 {v.cost}</p>
-                  <p>Speed {v.speed} • Storage {v.storage} • Fuel/use {v.fuel}</p>
-                  <button style={game.level >= v.unlock ? styles.greenButton : styles.lockedButton} onClick={() => buyVehicle(v)}>Buy Vehicle</button>
+                  <p>
+                    Unlock L{v.unlock} • 💵 {v.cost}
+                  </p>
+                  <p>
+                    Speed {v.speed} • Storage {v.storage} • Fuel/use {v.fuel}
+                  </p>
+                  <button style={game.level >= v.unlock ? styles.greenButton : styles.lockedButton} onClick={() => buyVehicle(v)}>
+                    Buy Vehicle
+                  </button>
                 </Card>
               ))}
             </div>
@@ -1952,8 +2220,12 @@ export default function Home() {
                   <div style={styles.cardIcon}>{tool.icon}</div>
                   <h3>{tool.name}</h3>
                   <p>Owned: {game.tools[tool.name] || 0}</p>
-                  <p>Unlock L{tool.unlock} • 💵 {tool.cost}</p>
-                  <button style={game.level >= tool.unlock ? styles.darkButton : styles.lockedButton} onClick={() => buyTool(tool)}>Buy Tool</button>
+                  <p>
+                    Unlock L{tool.unlock} • 💵 {tool.cost}
+                  </p>
+                  <button style={game.level >= tool.unlock ? styles.darkButton : styles.lockedButton} onClick={() => buyTool(tool)}>
+                    Buy Tool
+                  </button>
                 </Card>
               ))}
             </div>
@@ -1962,7 +2234,15 @@ export default function Home() {
 
         {tab === "market" && (
           <Panel>
-            <Top title="🛒 Parts Marketplace" text="Buy parts for your self-operated shop or sell extra inventory." action={<button style={styles.mainButtonSmall} onClick={autoRestock}>Auto Restock</button>} />
+            <Top
+              title="🛒 Parts Marketplace"
+              text="Buy parts for your self-operated shop or sell extra inventory."
+              action={
+                <button style={styles.mainButtonSmall} onClick={autoRestock}>
+                  Auto Restock
+                </button>
+              }
+            />
 
             <div style={styles.statLine}>
               <Mini label="Storage" value={`${inventoryUsed(game.parts)}/${storageCapacity(game)}`} />
@@ -1971,27 +2251,45 @@ export default function Home() {
               <Mini label="Insurance" value={game.insurance.parts ? "Active" : "None"} />
             </div>
 
-            <button style={styles.orangeButton} onClick={() => {
-              if (game.coins < 120) return setMessage("Need 120 coins.");
-              setGame((g) => ({ ...g, coins: g.coins - 120, fuel: Math.min(200, g.fuel + 60) }));
-            }}>Emergency Fuel +60 — 🪙 120</button>
+            <button
+              style={styles.orangeButton}
+              onClick={() => {
+                if (game.coins < 120) return setMessage("Need 120 coins.");
+                setGame((g) => ({ ...g, coins: g.coins - 120, fuel: Math.min(200, g.fuel + 60) }));
+              }}
+            >
+              Emergency Fuel +60 — 🪙 120
+            </button>
 
             <div style={styles.cards}>
               {availableParts.map((p) => {
                 const stock = game.parts[p.name] || 0;
                 const low = stock < p.reorder;
+
                 return (
                   <Card key={p.name} issue={low}>
                     <PartIcon icon={p.icon} label={p.label} />
                     <h3>{p.name}</h3>
-                    <p>Stock: <b>{stock}</b> • Reorder: {p.reorder}</p>
-                    <p>Buy 🪙 {p.cost} • Sell 🪙 {p.sell}</p>
+                    <p>
+                      Stock: <b>{stock}</b> • Reorder: {p.reorder}
+                    </p>
+                    <p>
+                      Buy 🪙 {p.cost} • Sell 🪙 {p.sell}
+                    </p>
                     {low && <div style={styles.warn}>Low stock</div>}
                     <div style={styles.actions}>
-                      <button style={styles.orangeButton} onClick={() => buyPart(p, 1)}>Buy 1</button>
-                      <button style={styles.darkButton} onClick={() => buyPart(p, 5)}>Buy 5</button>
-                      <button style={styles.greenButton} onClick={() => buyPart(p, 10)}>Buy 10</button>
-                      <button style={styles.lightButton} onClick={() => sellPart(p, 1)}>Sell 1</button>
+                      <button style={styles.orangeButton} onClick={() => buyPart(p, 1)}>
+                        Buy 1
+                      </button>
+                      <button style={styles.darkButton} onClick={() => buyPart(p, 5)}>
+                        Buy 5
+                      </button>
+                      <button style={styles.greenButton} onClick={() => buyPart(p, 10)}>
+                        Buy 10
+                      </button>
+                      <button style={styles.lightButton} onClick={() => sellPart(p, 1)}>
+                        Sell 1
+                      </button>
                     </div>
                   </Card>
                 );
@@ -2028,23 +2326,33 @@ export default function Home() {
             <div style={styles.cards}>
               {contracts(game.level).map((c) => {
                 const signed = game.signedContracts.includes(c.id);
-                const locked = game.level < c.unlock;
+                const lockedContract = game.level < c.unlock;
 
                 return (
                   <Card key={c.id} signed={signed}>
-                    <div style={styles.cardIcon}>{locked ? "🔒" : "📄"}</div>
+                    <div style={styles.cardIcon}>{lockedContract ? "🔒" : "📄"}</div>
                     <h3>{c.name}</h3>
-                    <p>Unlock L{c.unlock} • Cost 💵 {c.cost}</p>
-                    <p>Bonus: +{c.coin}% coins, +{c.money}% money</p>
+                    <p>
+                      Unlock L{c.unlock} • Cost 💵 {c.cost}
+                    </p>
+                    <p>
+                      Bonus: +{c.coin}% coins, +{c.money}% money
+                    </p>
                     {signed ? (
                       <button style={styles.ownedButton}>Signed</button>
-                    ) : locked ? (
+                    ) : lockedContract ? (
                       <button style={styles.lockedButton}>Locked</button>
                     ) : (
                       <div style={styles.actions}>
-                        <button style={styles.greenButton} onClick={() => negotiate(c, "safe")}>Safe</button>
-                        <button style={styles.darkButton} onClick={() => negotiate(c, "balanced")}>Balanced</button>
-                        <button style={styles.orangeButton} onClick={() => negotiate(c, "aggressive")}>Aggressive</button>
+                        <button style={styles.greenButton} onClick={() => negotiate(c, "safe")}>
+                          Safe
+                        </button>
+                        <button style={styles.darkButton} onClick={() => negotiate(c, "balanced")}>
+                          Balanced
+                        </button>
+                        <button style={styles.orangeButton} onClick={() => negotiate(c, "aggressive")}>
+                          Aggressive
+                        </button>
                       </div>
                     )}
                   </Card>
@@ -2056,7 +2364,15 @@ export default function Home() {
 
         {tab === "globe" && (
           <Panel>
-            <Top title="🌍 Globe Command Screen" text="All areas are visible from one screen. Switch active area and deploy from one command center." action={<button style={game.level >= 21 ? styles.greenButton : styles.lockedButton} onClick={expandArea}>{game.level >= 21 ? "Expand Area" : "Unlocks L21"}</button>} />
+            <Top
+              title="🌍 Globe Command Screen"
+              text="All areas are visible from one screen. Switch active area and deploy from one command center."
+              action={
+                <button style={game.level >= 21 ? styles.greenButton : styles.lockedButton} onClick={expandArea}>
+                  {game.level >= 21 ? "Expand Area" : "Unlocks L21"}
+                </button>
+              }
+            />
 
             <div style={styles.statLine}>
               <Mini label="Country" value={game.countryName} />
@@ -2071,7 +2387,9 @@ export default function Home() {
                 <button key={area.id} style={area.id === game.activeAreaId ? styles.globeActive : styles.globeNode} onClick={() => switchArea(area.id)}>
                   <span style={styles.globeIcon}>🌍</span>
                   <b>{area.name}</b>
-                  <small>{area.tiles.length}/{area.landSlots} slots</small>
+                  <small>
+                    {area.tiles.length}/{area.landSlots} slots
+                  </small>
                   <small>Area {index + 1}</small>
                 </button>
               ))}
@@ -2087,19 +2405,25 @@ export default function Home() {
               <Card>
                 <h3>🎁 Daily Login</h3>
                 <p>Streak: {game.loginStreak}</p>
-                <button style={styles.greenButton} onClick={claimDailyReward}>Claim Daily Reward</button>
+                <button style={styles.greenButton} onClick={claimDailyReward}>
+                  Claim Daily Reward
+                </button>
               </Card>
 
               <Card>
                 <h3>👷 Builder Teams</h3>
                 <p>Teams: {game.builderTeams}</p>
-                <button style={styles.greenButton} onClick={hireBuilder}>Hire Builder 💵 {400 + game.builderTeams * 300}</button>
+                <button style={styles.greenButton} onClick={hireBuilder}>
+                  Hire Builder 💵 {400 + game.builderTeams * 300}
+                </button>
               </Card>
 
               <Card>
                 <h3>📡 Dispatch Manager</h3>
                 <p>{game.dispatchManager ? "Hired" : "Unlocks Level 15 • Cost 💵 500"}</p>
-                <button style={game.level >= 15 ? styles.greenButton : styles.lockedButton} onClick={hireDispatchManager}>Hire Manager</button>
+                <button style={game.level >= 15 ? styles.greenButton : styles.lockedButton} onClick={hireDispatchManager}>
+                  Hire Manager
+                </button>
               </Card>
 
               <Card>
@@ -2107,29 +2431,56 @@ export default function Home() {
                 <p>Technicians: {game.insurance.technicians ? "Active" : "None"}</p>
                 <p>Vehicles: {game.insurance.vehicles ? "Active" : "None"}</p>
                 <p>Parts: {game.insurance.parts ? "Active" : "None"}</p>
-                <button style={styles.lightButton} onClick={() => buyInsurance("technicians")}>Technician Insurance 💵 250</button>
-                <button style={styles.lightButton} onClick={() => buyInsurance("vehicles")}>Vehicle Insurance 💵 300</button>
-                <button style={styles.lightButton} onClick={() => buyInsurance("parts")}>Parts Insurance 💵 180</button>
+                <button style={styles.lightButton} onClick={() => buyInsurance("technicians")}>
+                  Technician Insurance 💵 250
+                </button>
+                <button style={styles.lightButton} onClick={() => buyInsurance("vehicles")}>
+                  Vehicle Insurance 💵 300
+                </button>
+                <button style={styles.lightButton} onClick={() => buyInsurance("parts")}>
+                  Parts Insurance 💵 180
+                </button>
               </Card>
 
               <Card>
                 <h3>⬆️ Business Upgrades</h3>
-                <button style={styles.greenButton} onClick={upgradeYard}>Yard 💵 {150 + game.yardLevel * 120}</button>
-                <button style={styles.greenButton} onClick={upgradePartShop}>Parts Store 💵 {120 + game.partShopLevel * 110}</button>
-                <button style={styles.greenButton} onClick={upgradeTraining}>Training 💵 {140 + game.trainingLevel * 130}</button>
+                <button style={styles.greenButton} onClick={upgradeYard}>
+                  Yard 💵 {150 + game.yardLevel * 120}
+                </button>
+                <button style={styles.greenButton} onClick={upgradePartShop}>
+                  Parts Store 💵 {120 + game.partShopLevel * 110}
+                </button>
+                <button style={styles.greenButton} onClick={upgradeTraining}>
+                  Training 💵 {140 + game.trainingLevel * 130}
+                </button>
               </Card>
 
               <Card>
                 <h3>🤝 Friends & Clubs</h3>
                 <input style={styles.input} placeholder="Google Play name" value={googleName} onChange={(e) => setGoogleName(e.target.value)} />
-                <button style={styles.greenButton} onClick={() => {
-                  if (!googleName.trim()) return setMessage("Enter Google Play name.");
-                  setGame((g) => ({ ...g, googlePlayLinked: true, googlePlayName: googleName }));
-                }}>Link Restore Prototype</button>
-                <button style={styles.darkButton} onClick={addFriend}>Add Friend</button>
-                <button style={game.level >= 5 ? styles.orangeButton : styles.lockedButton} onClick={createClub}>Create Club</button>
-                <button style={game.club ? styles.darkButton : styles.lockedButton} onClick={startClubEvent}>Start Club Event</button>
-                {game.clubEvent && <div style={styles.warn}>{game.clubEvent.name} • {time(game.clubEvent.remaining)}</div>}
+                <button
+                  style={styles.greenButton}
+                  onClick={() => {
+                    if (!googleName.trim()) return setMessage("Enter Google Play name.");
+                    setGame((g) => ({ ...g, googlePlayLinked: true, googlePlayName: googleName }));
+                  }}
+                >
+                  Link Restore Prototype
+                </button>
+                <button style={styles.darkButton} onClick={addFriend}>
+                  Add Friend
+                </button>
+                <button style={game.level >= 5 ? styles.orangeButton : styles.lockedButton} onClick={createClub}>
+                  Create Club
+                </button>
+                <button style={game.club ? styles.darkButton : styles.lockedButton} onClick={startClubEvent}>
+                  Start Club Event
+                </button>
+                {game.clubEvent && (
+                  <div style={styles.warn}>
+                    {game.clubEvent.name} • {time(game.clubEvent.remaining)}
+                  </div>
+                )}
               </Card>
             </div>
 
@@ -2138,8 +2489,12 @@ export default function Home() {
               {game.dailyMissions.map((m) => (
                 <Card key={m.id} signed={m.done}>
                   <h3>{m.name}</h3>
-                  <p>{m.progress}/{m.target}</p>
-                  <p>Reward: 🪙 {m.coins} • 💵 {m.money}</p>
+                  <p>
+                    {m.progress}/{m.target}
+                  </p>
+                  <p>
+                    Reward: 🪙 {m.coins} • 💵 {m.money}
+                  </p>
                   <button style={m.done && !m.claimed ? styles.greenButton : styles.lockedButton} onClick={() => claimMission(m.id)}>
                     {m.claimed ? "Claimed" : m.done ? "Claim" : "In Progress"}
                   </button>
@@ -2151,8 +2506,12 @@ export default function Home() {
             <div style={styles.cards}>
               {milestones(game.level).map((m) => (
                 <Card key={m.level} signed={game.milestoneClaimed.includes(m.level)}>
-                  <h3>Level {m.level}: {m.name}</h3>
-                  <p>Reward: 🪙 {m.coins} • 💵 {m.money}</p>
+                  <h3>
+                    Level {m.level}: {m.name}
+                  </h3>
+                  <p>
+                    Reward: 🪙 {m.coins} • 💵 {m.money}
+                  </p>
                   <button style={game.milestoneClaimed.includes(m.level) ? styles.ownedButton : styles.greenButton} onClick={() => claimMilestone(m)}>
                     {game.milestoneClaimed.includes(m.level) ? "Claimed" : "Claim"}
                   </button>
@@ -2173,7 +2532,9 @@ export default function Home() {
                 ["five-star", "5-Star Garage"],
               ].map(([id, name]) => (
                 <Card key={id} signed={game.achievements.includes(id)}>
-                  <h3>{game.achievements.includes(id) ? "🏆" : "🔒"} {name}</h3>
+                  <h3>
+                    {game.achievements.includes(id) ? "🏆" : "🔒"} {name}
+                  </h3>
                   <p>{game.achievements.includes(id) ? "Unlocked" : "Locked"}</p>
                 </Card>
               ))}
@@ -2229,11 +2590,7 @@ function Panel({ children }) {
 }
 
 function Card({ children, special, issue, blue, signed }) {
-  return (
-    <div style={signed ? styles.signedCard : blue ? styles.blueCard : issue ? styles.issueCard : special ? styles.specialCard : styles.card}>
-      {children}
-    </div>
-  );
+  return <div style={signed ? styles.signedCard : blue ? styles.blueCard : issue ? styles.issueCard : special ? styles.specialCard : styles.card}>{children}</div>;
 }
 
 function Overlay({ children }) {
@@ -2253,6 +2610,7 @@ function PartIcon({ icon, label }) {
       </div>
     );
   }
+
   return <div style={styles.cardIcon}>{icon}</div>;
 }
 
@@ -2316,12 +2674,14 @@ function GarageZone({ icon, title, text }) {
 
 function urgencyStyle(urgency) {
   const base = { borderRadius: 999, padding: "6px 10px", fontWeight: 900, fontSize: 12 };
+
   if (urgency === "Government") return { ...base, background: "#e0e7ff", color: "#3730a3" };
   if (urgency === "Critical") return { ...base, background: "#fee2e2", color: "#991b1b" };
   if (urgency === "High") return { ...base, background: "#ffedd5", color: "#9a3412" };
   if (urgency === "Medium") return { ...base, background: "#fef3c7", color: "#92400e" };
   if (urgency === "Contract") return { ...base, background: "#dbeafe", color: "#1d4ed8" };
   if (urgency === "Charity") return { ...base, background: "#fef9c3", color: "#854d0e" };
+
   return { ...base, background: "#dcfce7", color: "#166534" };
 }
 
@@ -2460,7 +2820,16 @@ const styles = {
   stack: { display: "grid", gap: 8, marginTop: 12 },
   actions: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 8, marginTop: 12 },
   inputLabel: { display: "grid", gap: 6, fontWeight: 800 },
-  input: { border: "1px solid #d6d3d1", borderRadius: 14, padding: "12px 13px", fontSize: 15, outline: "none", width: "100%", boxSizing: "border-box", marginTop: 8 },
+  input: {
+    border: "1px solid #d6d3d1",
+    borderRadius: 14,
+    padding: "12px 13px",
+    fontSize: 15,
+    outline: "none",
+    width: "100%",
+    boxSizing: "border-box",
+    marginTop: 8,
+  },
   mainButton: { width: "100%", marginTop: 16, background: "#ea580c", color: "white", border: "none", borderRadius: 16, padding: "14px 18px", fontWeight: 900, fontSize: 16, cursor: "pointer" },
   mainButtonSmall: { background: "#ea580c", color: "white", border: "none", borderRadius: 14, padding: "11px 14px", fontWeight: 900, cursor: "pointer", margin: 4 },
   greenButton: { background: "#16a34a", color: "white", border: "none", borderRadius: 12, padding: "10px 12px", fontWeight: 900, cursor: "pointer", margin: 4 },
