@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-const SAVE_KEY = "fleetfix-tycoon-save-v8";
+const SAVE_KEY = "fleetfix-tycoon-save-v9";
 
 const STARTING_GAME = {
   started: false,
@@ -24,6 +24,7 @@ const STARTING_GAME = {
   technicians: [],
   activeJobs: [],
   dayOffRequests: [],
+  signedContracts: [],
   ownedBuildings: ["Small Garage", "Parts Store"],
   buildingLevels: {
     "Small Garage": 1,
@@ -34,8 +35,8 @@ const STARTING_GAME = {
     Battery: 6,
     "Engine Oil": 6,
     "Brake Kit": 5,
-    "Diagnostic Chip": 4,
-    "Tow Hook": 3,
+    "Diagnostic Chip": 0,
+    "Tow Hook": 0,
     "Fuel Seal Kit": 0,
     "Hydraulic Hose": 0,
     "ECU Sensor": 0,
@@ -391,6 +392,45 @@ const SERVICE_CALLS = [
   },
 ];
 
+const CONTRACTS = [
+  {
+    id: "local-delivery",
+    name: "Local Delivery Company",
+    unlockLevel: 2,
+    signCostMoney: 80,
+    description: "Small delivery vans will call more often. Adds 5% coin bonus.",
+    coinBonusPercent: 5,
+    moneyBonusPercent: 0,
+  },
+  {
+    id: "market-fleet",
+    name: "Market Fleet Partner",
+    unlockLevel: 5,
+    signCostMoney: 160,
+    description: "Local shops trust your garage. Adds 8% coin bonus and 5% money bonus.",
+    coinBonusPercent: 8,
+    moneyBonusPercent: 5,
+  },
+  {
+    id: "bus-depot",
+    name: "City Bus Depot",
+    unlockLevel: 10,
+    signCostMoney: 350,
+    description: "Commercial trust. Adds 12% coin bonus and 8% money bonus.",
+    coinBonusPercent: 12,
+    moneyBonusPercent: 8,
+  },
+  {
+    id: "regional-logistics",
+    name: "Regional Logistics Group",
+    unlockLevel: 15,
+    signCostMoney: 700,
+    description: "Large transport network contract. Adds 18% coin bonus and 12% money bonus.",
+    coinBonusPercent: 18,
+    moneyBonusPercent: 12,
+  },
+];
+
 const BUILDINGS = [
   {
     name: "Tow Yard",
@@ -428,6 +468,7 @@ const TABS = [
   { id: "jobs", label: "Jobs", icon: "⏱️" },
   { id: "team", label: "Team", icon: "👨‍🔧" },
   { id: "parts", label: "Parts", icon: "🏪" },
+  { id: "contracts", label: "Contracts", icon: "📄" },
   { id: "build", label: "Build", icon: "🏗️" },
 ];
 
@@ -436,15 +477,14 @@ function createId() {
 }
 
 function getGameSeconds(actualMinutes) {
-  return Math.max(5, Math.ceil(actualMinutes * 10));
+  // Fast mobile pacing:
+  // 60 real job minutes becomes about 60 seconds in game.
+  // This keeps the game quick and less boring for short mobile sessions.
+  return Math.max(6, Math.ceil(actualMinutes));
 }
 
 function getXpNeeded(level) {
   return level * 180;
-}
-
-function getLevelUpMoneyCost(level) {
-  return 80 + level * 45;
 }
 
 function getTechnicianXpNeeded(level) {
@@ -511,6 +551,15 @@ function normalizeTechnician(tech) {
     salary: getSalaryForLevel(level, tech.isOwner),
     daysOffTaken: tech.daysOffTaken ?? 0,
     avatar: tech.avatar || (tech.isOwner ? "👑" : "👨‍🔧"),
+    status:
+      tech.status === "Travelling" ||
+      tech.status === "Repairing" ||
+      tech.status === "Returning" ||
+      tech.status === "Supporting"
+        ? "Free"
+        : tech.status || "Free",
+    currentJobId: null,
+    energy: Math.max(tech.energy || 0, 50),
     pickupEquipment: {
       ...getBasicPickupEquipment(),
       ...(tech.pickupEquipment || {}),
@@ -552,7 +601,9 @@ function getUrgencyStyle(urgency) {
 }
 
 function getJobPhaseLabel(job) {
-  if (job.needsSupport && !job.supportAssigned) return "Paused: extra issue found";
+  if (job.needsSupport && !job.supportAssigned) {
+    return "Paused: technician energy below 20%";
+  }
   if (job.needsSupport && job.supportAssigned && job.supportRemaining > 0) {
     return "Backup resolving extra issue";
   }
@@ -581,6 +632,20 @@ function formatEta(seconds) {
   return `${m}m ${s}s`;
 }
 
+function getContractBonuses(signedContracts) {
+  const signed = CONTRACTS.filter((contract) =>
+    signedContracts.includes(contract.id)
+  );
+
+  return signed.reduce(
+    (total, contract) => ({
+      coinBonusPercent: total.coinBonusPercent + contract.coinBonusPercent,
+      moneyBonusPercent: total.moneyBonusPercent + contract.moneyBonusPercent,
+    }),
+    { coinBonusPercent: 0, moneyBonusPercent: 0 }
+  );
+}
+
 export default function Home() {
   const [game, setGame] = useState(STARTING_GAME);
   const [setup, setSetup] = useState({
@@ -597,6 +662,7 @@ export default function Home() {
   useEffect(() => {
     const saved =
       localStorage.getItem(SAVE_KEY) ||
+      localStorage.getItem("fleetfix-tycoon-save-v8") ||
       localStorage.getItem("fleetfix-tycoon-save-v7") ||
       localStorage.getItem("fleetfix-tycoon-save-v6") ||
       localStorage.getItem("fleetfix-tycoon-save-v5") ||
@@ -613,6 +679,7 @@ export default function Home() {
         ...STARTING_GAME,
         ...parsed,
         money: parsed.money ?? 100,
+        signedContracts: parsed.signedContracts || [],
         ownedBuildings: Array.from(
           new Set([...(parsed.ownedBuildings || []), "Small Garage", "Parts Store"])
         ),
@@ -696,6 +763,17 @@ export default function Home() {
             .map((job) => {
               let nextJob = { ...job };
 
+              const mainTech = updated.technicians.find(
+                (tech) => tech.id === job.technicianId
+              );
+
+              const freeBackupExists = updated.technicians.some(
+                (tech) =>
+                  tech.id !== job.technicianId &&
+                  tech.status === "Free" &&
+                  tech.energy > 0
+              );
+
               const issueChance =
                 job.urgency === "Critical" ? 0.035 :
                 job.urgency === "High" ? 0.022 :
@@ -704,18 +782,47 @@ export default function Home() {
               if (
                 job.phase === "repair" &&
                 !job.extraIssueChecked &&
-                !job.needsSupport &&
                 Math.random() < issueChance
               ) {
+                const lowEnergy = (mainTech?.energy || 100) < 20;
+
+                if (lowEnergy && freeBackupExists) {
+                  notes.push(
+                    `${job.technicianName} found an extra issue but energy is below 20%. Backup is required.`
+                  );
+
+                  return {
+                    ...nextJob,
+                    extraIssueChecked: true,
+                    needsSupport: true,
+                    supportAssigned: false,
+                    issueText:
+                      "Technician energy is below 20%. Send backup to continue safely.",
+                  };
+                }
+
+                const addedTime =
+                  job.urgency === "Critical"
+                    ? 50
+                    : job.urgency === "High"
+                    ? 35
+                    : 25;
+
+                notes.push(
+                  `${job.technicianName} found an extra issue on ${job.title}. Same technician continues. Extra time added: ${formatEta(addedTime)}.`
+                );
+
                 return {
                   ...nextJob,
                   extraIssueChecked: true,
-                  needsSupport: true,
+                  needsSupport: false,
                   supportAssigned: false,
                   issueText:
-                    job.urgency === "Critical"
-                      ? "Major hidden fault discovered. Backup technician required."
-                      : "Additional issue found. Backup can speed up resolution.",
+                    lowEnergy && !freeBackupExists
+                      ? "Energy is low, but no backup is available. Same technician continues slowly."
+                      : "Additional issue found. Same technician is repairing it.",
+                  phaseRemaining: nextJob.phaseRemaining + addedTime,
+                  phaseTotal: nextJob.phaseTotal + addedTime,
                 };
               }
 
@@ -776,13 +883,21 @@ export default function Home() {
                 (tech) => tech.id === job.supportTechnicianId
               );
 
-              updated.coins += job.rewardCoins;
-              updated.money += job.rewardMoney;
+              const contractBonuses = getContractBonuses(updated.signedContracts || []);
+              const bonusCoins = Math.round(
+                job.rewardCoins * (contractBonuses.coinBonusPercent / 100)
+              );
+              const bonusMoney = Math.round(
+                job.rewardMoney * (contractBonuses.moneyBonusPercent / 100)
+              );
+
+              updated.coins += job.rewardCoins + bonusCoins;
+              updated.money += job.rewardMoney + bonusMoney;
               updated.xp += job.rewardXp;
               updated.reputation += job.reputation;
               updated.completedJobs += 1;
-              updated.totalRevenue += job.rewardCoins;
-              updated.townValue += Math.floor(job.rewardCoins * 0.12);
+              updated.totalRevenue += job.rewardCoins + bonusCoins;
+              updated.townValue += Math.floor((job.rewardCoins + bonusCoins) * 0.12);
 
               updated.technicians = updated.technicians.map((tech) => {
                 if (tech.id === job.technicianId) {
@@ -849,7 +964,7 @@ export default function Home() {
               });
 
               notes.push(
-                `${technician?.name || "Technician"} returned from ${job.title}. Earned ${job.rewardCoins} coins, ${job.rewardMoney} money, ${job.rewardXp} company XP, and ${job.techXp} technician XP.`
+                `${technician?.name || "Technician"} returned from ${job.title}. Earned ${job.rewardCoins + bonusCoins} coins, ${job.rewardMoney + bonusMoney} money, ${job.rewardXp} company XP, and ${job.techXp} technician XP.`
               );
 
               if (supportTech) {
@@ -858,6 +973,17 @@ export default function Home() {
 
               return false;
             });
+        }
+
+        while (updated.xp >= getXpNeeded(updated.level)) {
+          updated.xp -= getXpNeeded(updated.level);
+          updated.level += 1;
+          updated.coins += 150;
+          updated.money += 25;
+
+          notes.push(
+            `Company level up! You reached Level ${updated.level}. New jobs, parts, and contracts may now be available. Bonus: 150 coins and 25 money.`
+          );
         }
 
         if (notes.length > 0) {
@@ -887,8 +1013,7 @@ export default function Home() {
   const lockedCalls = getLockedServiceCalls(game.level);
   const availableParts = getAvailableParts(game.level);
   const lockedParts = getLockedParts(game.level);
-  const levelUpReady = game.xp >= getXpNeeded(game.level);
-  const levelUpCost = getLevelUpMoneyCost(game.level);
+  const contractBonuses = getContractBonuses(game.signedContracts || []);
 
   function startGame() {
     if (!setup.companyName.trim() || !setup.ownerName.trim() || !setup.townName.trim()) {
@@ -911,33 +1036,6 @@ export default function Home() {
     setAvailableCalls(getRandomServiceCalls(1));
     setMessage(
       `Welcome to ${setup.companyName}. You are the owner-technician. Hire your first technician after Company Level 5.`
-    );
-  }
-
-  function levelUpCompany() {
-    if (!levelUpReady) {
-      setMessage(`You need ${getXpNeeded(game.level) - game.xp} more Company XP to level up.`);
-      return;
-    }
-
-    if (game.money < levelUpCost) {
-      setMessage(`You need ${levelUpCost} money to complete company level approval.`);
-      return;
-    }
-
-    const newLevel = game.level + 1;
-
-    setGame((current) => ({
-      ...current,
-      level: newLevel,
-      xp: current.xp - getXpNeeded(current.level),
-      money: current.money - levelUpCost,
-      coins: current.coins + 120,
-    }));
-
-    setAvailableCalls(getRandomServiceCalls(newLevel));
-    setMessage(
-      `Company upgraded to Level ${newLevel}. New jobs, parts, or buildings may now be available.`
     );
   }
 
@@ -1057,7 +1155,7 @@ export default function Home() {
       return;
     }
 
-    const supportTime = job.urgency === "Critical" ? 90 : 45;
+    const supportTime = job.urgency === "Critical" ? 45 : 30;
 
     setGame((current) => ({
       ...current,
@@ -1295,6 +1393,31 @@ export default function Home() {
     setMessage("Free technicians rested.");
   }
 
+  function signContract(contract) {
+    if (game.level < contract.unlockLevel) {
+      setMessage(`${contract.name} unlocks at Company Level ${contract.unlockLevel}.`);
+      return;
+    }
+
+    if (game.signedContracts?.includes(contract.id)) {
+      setMessage(`${contract.name} is already signed.`);
+      return;
+    }
+
+    if (game.money < contract.signCostMoney) {
+      setMessage(`You need ${contract.signCostMoney} money to sign ${contract.name}.`);
+      return;
+    }
+
+    setGame((current) => ({
+      ...current,
+      money: current.money - contract.signCostMoney,
+      signedContracts: [...(current.signedContracts || []), contract.id],
+    }));
+
+    setMessage(`${contract.name} signed. Future jobs will earn better rewards.`);
+  }
+
   function upgradeGarage() {
     const cost = game.garageLevel * 1000;
 
@@ -1372,6 +1495,7 @@ export default function Home() {
 
   function resetGame() {
     localStorage.removeItem(SAVE_KEY);
+    localStorage.removeItem("fleetfix-tycoon-save-v8");
     localStorage.removeItem("fleetfix-tycoon-save-v7");
     localStorage.removeItem("fleetfix-tycoon-save-v6");
     localStorage.removeItem("fleetfix-tycoon-save-v5");
@@ -1399,7 +1523,7 @@ export default function Home() {
           <h1 style={styles.title}>FleetFix Tycoon</h1>
           <p style={styles.subtitle}>
             Start alone as the owner-technician. Complete jobs, earn coins and money,
-            unlock new parts, and grow your fleet service empire.
+            unlock new parts, sign contracts, and grow your fleet service empire.
           </p>
 
           <div style={styles.formGrid}>
@@ -1471,27 +1595,13 @@ export default function Home() {
       <section style={styles.content}>
         {message && <div style={styles.message}>📢 {message}</div>}
 
-        {levelUpReady && (
-          <div style={styles.levelUpBox}>
-            <div>
-              <b>Company Level-Up Ready</b>
-              <p style={styles.smallText}>
-                Spend 💵 {levelUpCost} money to upgrade from Level {game.level} to Level {game.level + 1}.
-              </p>
-            </div>
-            <button style={styles.greenSmallButton} onClick={levelUpCompany}>
-              Level Up Company
-            </button>
-          </div>
-        )}
-
         {activeTab === "town" && (
           <Panel>
             <div style={styles.sectionHeader}>
               <div>
                 <h2 style={styles.sectionTitle}>🏙️ {game.townName} Service Town</h2>
                 <p style={styles.smallText}>
-                  Coins run operations. Money grows your company level and unlocks advanced work.
+                  Fast mobile pacing. Coins run operations. Money signs contracts.
                 </p>
               </div>
               <button style={styles.dangerButton} onClick={resetGame}>
@@ -1504,6 +1614,7 @@ export default function Home() {
               <MiniStat title="Town Value" value={`🏙️ ${game.townValue}`} />
               <MiniStat title="Daily Salary" value={`🧾 ${totalDailySalary}`} />
               <MiniStat title="Next Hire" value={game.level >= 5 ? "Unlocked" : "Level 5"} />
+              <MiniStat title="Contract Bonus" value={`🪙 +${contractBonuses.coinBonusPercent}% / 💵 +${contractBonuses.moneyBonusPercent}%`} />
             </div>
 
             <div style={styles.unlockBox}>
@@ -1592,7 +1703,7 @@ export default function Home() {
                       <p><b>Skill:</b> {call.skill}</p>
                       <p><b>Parts:</b> {call.partQty} {call.partNeeded}</p>
                       <p>
-                        <b>Game ETA:</b> Go {formatEta(travel)} • Repair {formatEta(repair)} • Return {formatEta(back)}
+                        <b>Fast ETA:</b> Go {formatEta(travel)} • Repair {formatEta(repair)} • Return {formatEta(back)}
                       </p>
                       <p><b>Reward:</b> 🪙 {call.rewardCoins} • 💵 {call.rewardMoney} • Company XP {call.rewardXp}</p>
                     </div>
@@ -1642,7 +1753,7 @@ export default function Home() {
           <Panel>
             <h2 style={styles.sectionTitle}>⏱️ Active Jobs with ETA</h2>
             <p style={styles.smallText}>
-              Jobs include travel, repair, return, and possible extra issues.
+              Backup is only requested when the main technician energy is below 20%.
             </p>
 
             <div style={styles.cardsGrid}>
@@ -1666,7 +1777,7 @@ export default function Home() {
                           <p style={styles.smallText}>Location: {job.mapPoint}</p>
                           <p style={styles.phaseText}>{getJobPhaseLabel(job)}</p>
                           {job.skillMatch && <p style={styles.bonusText}>⚡ Skill match bonus</p>}
-                          {job.needsSupport && (
+                          {job.issueText && (
                             <div style={styles.warningBox}>
                               {job.issueText}
                             </div>
@@ -1887,6 +1998,60 @@ export default function Home() {
                 </div>
               </>
             )}
+          </Panel>
+        )}
+
+        {activeTab === "contracts" && (
+          <Panel>
+            <div style={styles.sectionHeader}>
+              <div>
+                <h2 style={styles.sectionTitle}>📄 Company Contracts</h2>
+                <p style={styles.smallText}>
+                  Use money to sign contracts. Contracts increase future job rewards.
+                </p>
+              </div>
+            </div>
+
+            <div style={styles.cardsGrid}>
+              {CONTRACTS.map((contract) => {
+                const signed = game.signedContracts?.includes(contract.id);
+                const locked = game.level < contract.unlockLevel;
+
+                return (
+                  <div
+                    key={contract.id}
+                    style={signed ? styles.contractSignedCard : styles.contractCard}
+                  >
+                    <div style={styles.cardIcon}>{locked ? "🔒" : "📄"}</div>
+                    <h3 style={styles.cardTitle}>{contract.name}</h3>
+                    <p style={styles.smallText}>{contract.description}</p>
+                    <p style={styles.smallText}>Unlock Level: {contract.unlockLevel}</p>
+                    <p style={styles.smallText}>Signing Cost: 💵 {contract.signCostMoney}</p>
+                    <p style={styles.smallText}>
+                      Bonus: +{contract.coinBonusPercent}% coins, +{contract.moneyBonusPercent}% money
+                    </p>
+
+                    <button
+                      style={
+                        signed
+                          ? styles.ownedButton
+                          : locked
+                          ? styles.lockedButton
+                          : styles.darkButton
+                      }
+                      disabled={signed}
+                      onClick={() => signContract(contract)}
+                    >
+                      {signed
+                        ? "Signed"
+                        : locked
+                        ? `Locked until Level ${contract.unlockLevel}`
+                        : "Sign Contract"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </Panel>
         )}
 
@@ -2121,7 +2286,7 @@ const styles = {
     margin: "14px auto 0",
     padding: "0 16px",
     display: "grid",
-    gridTemplateColumns: "repeat(6, 1fr)",
+    gridTemplateColumns: "repeat(7, 1fr)",
     gap: 8,
   },
   navButton: {
@@ -2155,18 +2320,6 @@ const styles = {
     padding: 14,
     fontWeight: 800,
     lineHeight: 1.4,
-  },
-  levelUpBox: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: 12,
-    alignItems: "center",
-    flexWrap: "wrap",
-    background: "#ecfccb",
-    border: "1px solid #bef264",
-    color: "#365314",
-    borderRadius: 18,
-    padding: 14,
   },
   panel: {
     background: "rgba(255,255,255,0.94)",
@@ -2480,6 +2633,20 @@ const styles = {
     borderRadius: 22,
     padding: 16,
     opacity: 0.8,
+  },
+  contractCard: {
+    background: "#fffaf5",
+    border: "1px solid #fed7aa",
+    borderRadius: 22,
+    padding: 16,
+    boxShadow: "0 10px 22px rgba(0,0,0,0.06)",
+  },
+  contractSignedCard: {
+    background: "#ecfccb",
+    border: "1px solid #bef264",
+    borderRadius: 22,
+    padding: 16,
+    boxShadow: "0 10px 22px rgba(0,0,0,0.06)",
   },
   jobCard: {
     background: "#fffaf5",
