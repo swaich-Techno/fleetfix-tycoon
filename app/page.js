@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+const SAVE_KEY = "fleetfix-tycoon-save-v2";
+
 const STARTING_GAME = {
   started: false,
   companyName: "",
@@ -18,12 +20,27 @@ const STARTING_GAME = {
   ownedBuildings: ["Small Garage"],
 };
 
+const SKILLS = ["Tyre", "Electrical", "Engine", "Mechanical", "Diagnostic", "Towing"];
+
+const TECHNICIAN_NAMES = [
+  "Ravi",
+  "Aman",
+  "Simran",
+  "Gurpreet",
+  "Iqbal",
+  "Karan",
+  "Mehak",
+  "Arjun",
+  "Jaspreet",
+  "Kabir",
+];
+
 const SERVICE_CALLS = [
   {
     id: 1,
     title: "Car Tyre Puncture",
     vehicle: "Small Car",
-    problem: "Flat tyre on town road",
+    problem: "Flat tyre near town road",
     skill: "Tyre",
     duration: 20,
     rewardCoins: 120,
@@ -36,7 +53,7 @@ const SERVICE_CALLS = [
     id: 2,
     title: "Van Battery Dead",
     vehicle: "Delivery Van",
-    problem: "Battery not starting",
+    problem: "Battery not starting at market area",
     skill: "Electrical",
     duration: 30,
     rewardCoins: 180,
@@ -62,7 +79,7 @@ const SERVICE_CALLS = [
     id: 4,
     title: "Trailer Brake Issue",
     vehicle: "Trailer",
-    problem: "Brake system inspection required",
+    problem: "Brake inspection required before delivery",
     skill: "Mechanical",
     duration: 50,
     rewardCoins: 320,
@@ -73,9 +90,9 @@ const SERVICE_CALLS = [
   },
   {
     id: 5,
-    title: "Bus Emergency Inspection",
+    title: "Bus Safety Inspection",
     vehicle: "Bus",
-    problem: "Passenger bus needs safety check",
+    problem: "Passenger bus needs emergency safety check",
     skill: "Diagnostic",
     duration: 60,
     rewardCoins: 450,
@@ -97,47 +114,79 @@ const SERVICE_CALLS = [
     difficulty: 5,
     icon: "🚚",
   },
+  {
+    id: 7,
+    title: "Broken Trailer Rescue",
+    vehicle: "Broken Trailer",
+    problem: "Trailer is stuck outside city border",
+    skill: "Towing",
+    duration: 80,
+    rewardCoins: 750,
+    rewardXp: 190,
+    reputation: 10,
+    difficulty: 6,
+    icon: "🪝",
+  },
+  {
+    id: 8,
+    title: "Fleet Contract Inspection",
+    vehicle: "Fleet Vehicles",
+    problem: "Company wants 5 vehicles inspected",
+    skill: "Diagnostic",
+    duration: 90,
+    rewardCoins: 950,
+    rewardXp: 240,
+    reputation: 14,
+    difficulty: 7,
+    icon: "🏢",
+  },
 ];
 
 const BUILDINGS = [
   {
     name: "Parts Store",
     cost: 800,
-    description: "Unlocks better repair supplies.",
+    unlockLevel: 1,
+    description: "Stores parts and improves business value.",
     icon: "🏪",
   },
   {
     name: "Tow Yard",
     cost: 1400,
-    description: "Prepares your company for towing missions.",
+    unlockLevel: 3,
+    description: "Unlocks towing-style rescue missions.",
     icon: "🚚",
   },
   {
     name: "Training Center",
-    cost: 2000,
-    description: "Future upgrade center for technicians.",
+    cost: 2200,
+    unlockLevel: 5,
+    description: "Helps your technicians grow faster.",
     icon: "🎓",
   },
   {
     name: "Fuel Station",
-    cost: 2600,
-    description: "Adds business value to your town.",
+    cost: 3000,
+    unlockLevel: 7,
+    description: "Adds a strong town business asset.",
     icon: "⛽",
+  },
+  {
+    name: "Dispatch Office",
+    cost: 4200,
+    unlockLevel: 10,
+    description: "Prepares your empire for multiple cities.",
+    icon: "📡",
   },
 ];
 
-const TECHNICIAN_NAMES = [
-  "Ravi",
-  "Aman",
-  "Simran",
-  "Gurpreet",
-  "Iqbal",
-  "Karan",
-  "Mehak",
-  "Arjun",
+const TABS = [
+  { id: "town", label: "Town", icon: "🏜️" },
+  { id: "calls", label: "Calls", icon: "🚨" },
+  { id: "jobs", label: "Jobs", icon: "⏱️" },
+  { id: "team", label: "Team", icon: "👨‍🔧" },
+  { id: "build", label: "Build", icon: "🏗️" },
 ];
-
-const SKILLS = ["Tyre", "Electrical", "Engine", "Mechanical", "Diagnostic"];
 
 function getXpNeeded(level) {
   return level * 150;
@@ -146,16 +195,18 @@ function getXpNeeded(level) {
 function getRandomServiceCalls(level) {
   const available = SERVICE_CALLS.filter((call) => call.difficulty <= level + 1);
   const shuffled = [...available].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, 3);
+  return shuffled.slice(0, 4);
+}
+
+function createId() {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
 function createTechnician(name, isOwner = false) {
   return {
-    id: Math.random().toString(36).slice(2),
+    id: createId(),
     name,
-    skill: isOwner
-      ? "All-Rounder"
-      : SKILLS[Math.floor(Math.random() * SKILLS.length)],
+    skill: isOwner ? "All-Rounder" : SKILLS[Math.floor(Math.random() * SKILLS.length)],
     level: 1,
     energy: 100,
     status: "Free",
@@ -174,23 +225,35 @@ export default function Home() {
   });
   const [availableCalls, setAvailableCalls] = useState([]);
   const [message, setMessage] = useState("");
+  const [activeTab, setActiveTab] = useState("town");
+  const [renameId, setRenameId] = useState("");
+  const [renameValue, setRenameValue] = useState("");
 
   useEffect(() => {
-    const savedGame = localStorage.getItem("fleetfix-tycoon-save");
+    const savedV2 = localStorage.getItem(SAVE_KEY);
+    const savedV1 = localStorage.getItem("fleetfix-tycoon-save");
+
+    const savedGame = savedV2 || savedV1;
 
     if (savedGame) {
       const parsedGame = JSON.parse(savedGame);
-      setGame(parsedGame);
+      setGame({
+        ...STARTING_GAME,
+        ...parsedGame,
+        technicians: parsedGame.technicians || [],
+        activeJobs: parsedGame.activeJobs || [],
+        ownedBuildings: parsedGame.ownedBuildings || ["Small Garage"],
+      });
 
       if (parsedGame.started) {
-        setAvailableCalls(getRandomServiceCalls(parsedGame.level));
+        setAvailableCalls(getRandomServiceCalls(parsedGame.level || 1));
       }
     }
   }, []);
 
   useEffect(() => {
     if (game.started) {
-      localStorage.setItem("fleetfix-tycoon-save", JSON.stringify(game));
+      localStorage.setItem(SAVE_KEY, JSON.stringify(game));
     }
   }, [game]);
 
@@ -230,11 +293,12 @@ export default function Home() {
                     level: tech.level + 1,
                   };
                 }
+
                 return tech;
               });
 
               completedMessages.push(
-                `${technician?.name || "Technician"} completed ${job.title}. You earned ${job.rewardCoins} coins and ${job.rewardXp} XP.`
+                `${technician?.name || "Technician"} completed ${job.title}. Earned ${job.rewardCoins} coins and ${job.rewardXp} XP.`
               );
 
               return false;
@@ -248,9 +312,9 @@ export default function Home() {
         while (updatedGame.xp >= getXpNeeded(updatedGame.level)) {
           updatedGame.xp -= getXpNeeded(updatedGame.level);
           updatedGame.level += 1;
-          updatedGame.coins += 200;
+          updatedGame.coins += 250;
           completedMessages.push(
-            `Level up! You reached Level ${updatedGame.level} and earned 200 bonus coins.`
+            `Level up! You reached Level ${updatedGame.level} and earned 250 bonus coins.`
           );
         }
 
@@ -272,6 +336,15 @@ export default function Home() {
     );
   }, [game.technicians]);
 
+  const nextGoal = useMemo(() => {
+    if (game.level < 2) return "Complete service calls to reach Level 2.";
+    if (game.technicians.length < 3) return "Hire one more technician to grow your team.";
+    if (game.garageLevel < 2) return "Upgrade your garage to handle bigger repairs.";
+    if (!game.ownedBuildings.includes("Parts Store")) return "Build the Parts Store.";
+    if (game.level < 5) return "Reach Level 5 to unlock the Training Center.";
+    return "Keep expanding your repair empire and unlock bigger contracts.";
+  }, [game]);
+
   function startGame() {
     if (
       !setup.companyName.trim() ||
@@ -279,9 +352,7 @@ export default function Home() {
       !setup.townName.trim() ||
       !setup.technicianName.trim()
     ) {
-      setMessage(
-        "Please fill company name, owner name, town name, and first technician name."
-      );
+      setMessage("Please fill all fields to start your company.");
       return;
     }
 
@@ -299,9 +370,8 @@ export default function Home() {
 
     setGame(newGame);
     setAvailableCalls(getRandomServiceCalls(1));
-    setMessage(
-      `Welcome to ${setup.companyName}! Your repair empire begins in ${setup.townName}.`
-    );
+    setActiveTab("town");
+    setMessage(`Welcome to ${setup.companyName}. Your repair empire begins in ${setup.townName}.`);
   }
 
   function dispatchTechnician(serviceCall, technicianId) {
@@ -317,13 +387,21 @@ export default function Home() {
       return;
     }
 
+    const skillMatch =
+      technician.skill === serviceCall.skill || technician.skill === "All-Rounder";
+
+    const boostedDuration = skillMatch
+      ? Math.max(8, Math.floor(serviceCall.duration * 0.7))
+      : serviceCall.duration;
+
     const activeJob = {
       ...serviceCall,
-      jobId: Math.random().toString(36).slice(2),
+      jobId: createId(),
       technicianId,
       technicianName: technician.name,
-      remainingTime: serviceCall.duration,
-      totalTime: serviceCall.duration,
+      remainingTime: boostedDuration,
+      totalTime: boostedDuration,
+      skillMatch,
     };
 
     setGame((currentGame) => ({
@@ -346,7 +424,12 @@ export default function Home() {
       currentCalls.filter((call) => call.id !== serviceCall.id)
     );
 
-    setMessage(`${technician.name} has been dispatched to ${serviceCall.title}.`);
+    setActiveTab("jobs");
+    setMessage(
+      skillMatch
+        ? `${technician.name} is a good skill match. Job time reduced.`
+        : `${technician.name} has been dispatched to ${serviceCall.title}.`
+    );
   }
 
   function refreshCalls() {
@@ -373,9 +456,7 @@ export default function Home() {
       technicians: [...currentGame.technicians, newTechnician],
     }));
 
-    setMessage(
-      `${newTechnician.name} joined your company as a ${newTechnician.skill} technician.`
-    );
+    setMessage(`${newTechnician.name} joined as a ${newTechnician.skill} technician.`);
   }
 
   function upgradeGarage() {
@@ -396,6 +477,11 @@ export default function Home() {
   }
 
   function buyBuilding(building) {
+    if (game.level < building.unlockLevel) {
+      setMessage(`${building.name} unlocks at Level ${building.unlockLevel}.`);
+      return;
+    }
+
     if (game.ownedBuildings.includes(building.name)) {
       setMessage(`You already own ${building.name}.`);
       return;
@@ -427,7 +513,31 @@ export default function Home() {
     setMessage("Free technicians have rested and recovered energy.");
   }
 
+  function startRename(tech) {
+    setRenameId(tech.id);
+    setRenameValue(tech.name);
+  }
+
+  function saveRename() {
+    if (!renameValue.trim()) {
+      setMessage("Technician name cannot be empty.");
+      return;
+    }
+
+    setGame((currentGame) => ({
+      ...currentGame,
+      technicians: currentGame.technicians.map((tech) =>
+        tech.id === renameId ? { ...tech, name: renameValue.trim() } : tech
+      ),
+    }));
+
+    setMessage("Technician renamed successfully.");
+    setRenameId("");
+    setRenameValue("");
+  }
+
   function resetGame() {
+    localStorage.removeItem(SAVE_KEY);
     localStorage.removeItem("fleetfix-tycoon-save");
     setGame(STARTING_GAME);
     setSetup({
@@ -438,6 +548,7 @@ export default function Home() {
     });
     setAvailableCalls([]);
     setMessage("Game reset. Start your repair empire again.");
+    setActiveTab("town");
   }
 
   if (!game.started) {
@@ -447,8 +558,8 @@ export default function Home() {
           <div style={styles.logo}>🛠️🚛</div>
           <h1 style={styles.title}>FleetFix Tycoon</h1>
           <p style={styles.subtitle}>
-            Start with one broken garage in barren land. Repair vehicles, hire
-            technicians, answer emergency calls, and build your repair empire.
+            Build a repair empire from one broken garage. Dispatch technicians,
+            answer emergency calls, upgrade your town, and expand your company.
           </p>
 
           <div style={styles.formGrid}>
@@ -477,9 +588,7 @@ export default function Home() {
               label="First Technician Name"
               placeholder="Ravi"
               value={setup.technicianName}
-              onChange={(value) =>
-                setSetup({ ...setup, technicianName: value })
-              }
+              onChange={(value) => setSetup({ ...setup, technicianName: value })}
             />
           </div>
 
@@ -507,19 +616,39 @@ export default function Home() {
           <Stat label="Coins" value={`🪙 ${game.coins}`} />
           <Stat label="XP" value={`${game.xp}/${getXpNeeded(game.level)}`} />
           <Stat label="Level" value={game.level} />
-          <Stat label="Reputation" value={`⭐ ${game.reputation}`} />
+          <Stat label="Rep" value={`⭐ ${game.reputation}`} />
           <Stat label="Jobs" value={game.completedJobs} />
         </div>
       </header>
 
-      <section style={styles.layout}>
-        <div style={styles.leftColumn}>
+      <section style={styles.navBar}>
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            style={activeTab === tab.id ? styles.navButtonActive : styles.navButton}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            <span>{tab.icon}</span>
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </section>
+
+      <section style={styles.content}>
+        <div style={styles.messageRow}>
+          <div style={styles.guideBox}>
+            <b>Next Goal:</b> {nextGoal}
+          </div>
+          {message && <div style={styles.message}>📢 {message}</div>}
+        </div>
+
+        {activeTab === "town" && (
           <Panel>
             <div style={styles.sectionHeader}>
               <div>
                 <h2 style={styles.sectionTitle}>🏜️ {game.townName}</h2>
                 <p style={styles.smallText}>
-                  Barren land slowly becoming a repair empire.
+                  Township-style repair map. Build your service empire tile by tile.
                 </p>
               </div>
 
@@ -528,57 +657,39 @@ export default function Home() {
               </button>
             </div>
 
-            <div style={styles.townGrid}>
-              <TownTile
-                icon="🏚️"
-                title={`Garage Lvl ${game.garageLevel}`}
-                subtitle="Main repair base"
-              />
+            <div style={styles.mapArea}>
+              <TownTile icon="🏚️" title={`Garage Lvl ${game.garageLevel}`} subtitle="Main repair base" owned />
+              <TownTile icon="🛣️" title="Main Road" subtitle="Calls arrive here" owned />
+              <TownTile icon="🌵" title="Barren Land" subtitle="Clean and expand" owned />
+              <TownTile icon="🚧" title="Service Zone" subtitle="Future work area" owned />
 
-              {game.ownedBuildings.includes("Parts Store") && (
+              {BUILDINGS.map((building) => (
                 <TownTile
-                  icon="🏪"
-                  title="Parts Store"
-                  subtitle="Repair supplies"
+                  key={building.name}
+                  icon={building.icon}
+                  title={building.name}
+                  subtitle={
+                    game.ownedBuildings.includes(building.name)
+                      ? "Built"
+                      : game.level >= building.unlockLevel
+                      ? `Ready to build: ${building.cost} coins`
+                      : `Unlocks at Level ${building.unlockLevel}`
+                  }
+                  owned={game.ownedBuildings.includes(building.name)}
+                  locked={game.level < building.unlockLevel}
                 />
-              )}
-
-              {game.ownedBuildings.includes("Tow Yard") && (
-                <TownTile icon="🚚" title="Tow Yard" subtitle="Recovery area" />
-              )}
-
-              {game.ownedBuildings.includes("Training Center") && (
-                <TownTile
-                  icon="🎓"
-                  title="Training Center"
-                  subtitle="Skill upgrades"
-                />
-              )}
-
-              {game.ownedBuildings.includes("Fuel Station") && (
-                <TownTile
-                  icon="⛽"
-                  title="Fuel Station"
-                  subtitle="Town business"
-                />
-              )}
-
-              <TownTile
-                icon="🛣️"
-                title="Highway"
-                subtitle="Service calls arrive"
-              />
-              <TownTile icon="🌵" title="Empty Land" subtitle="Future expansion" />
-              <TownTile icon="🏗️" title="Build Zone" subtitle="Unlock more soon" />
+              ))}
             </div>
           </Panel>
+        )}
 
+        {activeTab === "calls" && (
           <Panel>
             <div style={styles.sectionHeader}>
               <div>
                 <h2 style={styles.sectionTitle}>🚨 Service Calls</h2>
                 <p style={styles.smallText}>
-                  Dispatch technicians to roadside problems.
+                  Choose the right technician. Matching skill reduces job time.
                 </p>
               </div>
 
@@ -598,34 +709,30 @@ export default function Home() {
                     <p style={styles.smallText}>{call.problem}</p>
 
                     <div style={styles.infoList}>
-                      <p>
-                        <b>Vehicle:</b> {call.vehicle}
-                      </p>
-                      <p>
-                        <b>Skill:</b> {call.skill}
-                      </p>
-                      <p>
-                        <b>Time:</b> {call.duration}s
-                      </p>
-                      <p>
-                        <b>Reward:</b> 🪙 {call.rewardCoins} • XP{" "}
-                        {call.rewardXp}
-                      </p>
+                      <p><b>Vehicle:</b> {call.vehicle}</p>
+                      <p><b>Skill Needed:</b> {call.skill}</p>
+                      <p><b>Base Time:</b> {call.duration}s</p>
+                      <p><b>Reward:</b> 🪙 {call.rewardCoins} • XP {call.rewardXp}</p>
                     </div>
 
                     <div style={styles.buttonStack}>
                       {freeTechnicians.length === 0 ? (
                         <div style={styles.warningBox}>No free technicians.</div>
                       ) : (
-                        freeTechnicians.map((tech) => (
-                          <button
-                            key={tech.id}
-                            style={styles.orangeSmallButton}
-                            onClick={() => dispatchTechnician(call, tech.id)}
-                          >
-                            Send {tech.name}
-                          </button>
-                        ))
+                        freeTechnicians.map((tech) => {
+                          const match =
+                            tech.skill === call.skill || tech.skill === "All-Rounder";
+
+                          return (
+                            <button
+                              key={tech.id}
+                              style={match ? styles.greenSmallButton : styles.orangeSmallButton}
+                              onClick={() => dispatchTechnician(call, tech.id)}
+                            >
+                              Send {tech.name} {match ? "⚡" : ""}
+                            </button>
+                          );
+                        })
                       )}
                     </div>
                   </div>
@@ -633,9 +740,12 @@ export default function Home() {
               )}
             </div>
           </Panel>
+        )}
 
+        {activeTab === "jobs" && (
           <Panel>
             <h2 style={styles.sectionTitle}>⏱️ Active Jobs</h2>
+            <p style={styles.smallText}>Watch dispatched technicians complete repairs.</p>
 
             <div style={styles.cardsGrid}>
               {game.activeJobs.length === 0 ? (
@@ -649,26 +759,18 @@ export default function Home() {
                     <div key={job.jobId} style={styles.jobCard}>
                       <div style={styles.jobTop}>
                         <div>
-                          <h3 style={styles.cardTitle}>
-                            {job.icon} {job.title}
-                          </h3>
-                          <p style={styles.smallText}>
-                            Technician: {job.technicianName}
-                          </p>
+                          <h3 style={styles.cardTitle}>{job.icon} {job.title}</h3>
+                          <p style={styles.smallText}>Technician: {job.technicianName}</p>
+                          {job.skillMatch && (
+                            <p style={styles.bonusText}>⚡ Skill match bonus active</p>
+                          )}
                         </div>
 
-                        <span style={styles.timerBadge}>
-                          {job.remainingTime}s
-                        </span>
+                        <span style={styles.timerBadge}>{job.remainingTime}s</span>
                       </div>
 
                       <div style={styles.progressOuter}>
-                        <div
-                          style={{
-                            ...styles.progressInner,
-                            width: `${progress}%`,
-                          }}
-                        />
+                        <div style={{ ...styles.progressInner, width: `${progress}%` }} />
                       </div>
                     </div>
                   );
@@ -676,16 +778,18 @@ export default function Home() {
               )}
             </div>
           </Panel>
-        </div>
+        )}
 
-        <aside style={styles.rightColumn}>
-          {message && <div style={styles.message}>📢 {message}</div>}
-
+        {activeTab === "team" && (
           <Panel>
-            <h2 style={styles.sectionTitle}>👨‍🔧 Technicians</h2>
-            <p style={styles.smallText}>Manage your repair team.</p>
+            <div style={styles.sectionHeader}>
+              <div>
+                <h2 style={styles.sectionTitle}>👨‍🔧 Technicians</h2>
+                <p style={styles.smallText}>Hire, rename, and manage your repair team.</p>
+              </div>
+            </div>
 
-            <div style={styles.techList}>
+            <div style={styles.cardsGrid}>
               {game.technicians.map((tech) => (
                 <div key={tech.id} style={styles.techCard}>
                   <div style={styles.jobTop}>
@@ -696,8 +800,7 @@ export default function Home() {
                     <span
                       style={{
                         ...styles.statusBadge,
-                        background:
-                          tech.status === "Free" ? "#dcfce7" : "#fef3c7",
+                        background: tech.status === "Free" ? "#dcfce7" : "#fef3c7",
                         color: tech.status === "Free" ? "#166534" : "#92400e",
                       }}
                     >
@@ -708,22 +811,43 @@ export default function Home() {
                   <p style={styles.smallText}>Skill: {tech.skill}</p>
                   <p style={styles.smallText}>Level: {tech.level}</p>
                   <p style={styles.smallText}>Energy: {tech.energy}%</p>
+
+                  {renameId === tech.id ? (
+                    <div style={styles.renameBox}>
+                      <input
+                        style={styles.input}
+                        value={renameValue}
+                        onChange={(event) => setRenameValue(event.target.value)}
+                      />
+                      <button style={styles.greenSmallButton} onClick={saveRename}>
+                        Save
+                      </button>
+                    </div>
+                  ) : (
+                    <button style={styles.lightSmallButton} onClick={() => startRename(tech)}>
+                      Rename
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
 
-            <button style={styles.darkFullButton} onClick={hireTechnician}>
-              Hire Technician — 🪙 {700 + game.technicians.length * 350}
-            </button>
+            <div style={styles.actionRow}>
+              <button style={styles.darkFullButton} onClick={hireTechnician}>
+                Hire Technician — 🪙 {700 + game.technicians.length * 350}
+              </button>
 
-            <button style={styles.lightFullButton} onClick={restTechnicians}>
-              Rest Free Technicians
-            </button>
+              <button style={styles.lightFullButton} onClick={restTechnicians}>
+                Rest Free Technicians
+              </button>
+            </div>
           </Panel>
+        )}
 
+        {activeTab === "build" && (
           <Panel>
-            <h2 style={styles.sectionTitle}>🏗️ Upgrades</h2>
-            <p style={styles.smallText}>Upgrade garage and expand your town.</p>
+            <h2 style={styles.sectionTitle}>🏗️ Build & Upgrade</h2>
+            <p style={styles.smallText}>Upgrade your garage and unlock new buildings by level.</p>
 
             <button style={styles.mainButton} onClick={upgradeGarage}>
               Upgrade Garage — 🪙 {game.garageLevel * 1000}
@@ -732,21 +856,31 @@ export default function Home() {
             <div style={styles.buildingList}>
               {BUILDINGS.map((building) => {
                 const owned = game.ownedBuildings.includes(building.name);
+                const locked = game.level < building.unlockLevel;
 
                 return (
                   <div key={building.name} style={styles.buildingCard}>
-                    <div style={styles.buildingIcon}>{building.icon}</div>
+                    <div style={styles.buildingIcon}>{locked ? "🔒" : building.icon}</div>
 
-                    <div>
+                    <div style={{ flex: 1 }}>
                       <h3 style={styles.cardTitle}>{building.name}</h3>
                       <p style={styles.smallText}>{building.description}</p>
+                      <p style={styles.smallText}>
+                        Unlock Level: {building.unlockLevel} • Cost: 🪙 {building.cost}
+                      </p>
 
                       <button
-                        style={owned ? styles.ownedButton : styles.darkButton}
+                        style={
+                          owned
+                            ? styles.ownedButton
+                            : locked
+                            ? styles.lockedButton
+                            : styles.darkButton
+                        }
                         onClick={() => buyBuilding(building)}
                         disabled={owned}
                       >
-                        {owned ? "Owned" : `Build — 🪙 ${building.cost}`}
+                        {owned ? "Owned" : locked ? `Locked until Level ${building.unlockLevel}` : "Build"}
                       </button>
                     </div>
                   </div>
@@ -754,7 +888,7 @@ export default function Home() {
               })}
             </div>
           </Panel>
-        </aside>
+        )}
       </section>
     </main>
   );
@@ -787,10 +921,16 @@ function Panel({ children }) {
   return <div style={styles.panel}>{children}</div>;
 }
 
-function TownTile({ icon, title, subtitle }) {
+function TownTile({ icon, title, subtitle, owned, locked }) {
   return (
-    <div style={styles.townTile}>
-      <div style={styles.townIcon}>{icon}</div>
+    <div
+      style={{
+        ...styles.townTile,
+        opacity: locked ? 0.55 : 1,
+        border: owned ? "2px solid #22c55e" : "1px solid #d6d3d1",
+      }}
+    >
+      <div style={styles.townIcon}>{locked ? "🔒" : icon}</div>
       <h3 style={styles.cardTitle}>{title}</h3>
       <p style={styles.smallText}>{subtitle}</p>
     </div>
@@ -814,8 +954,8 @@ const styles = {
   },
   startCard: {
     width: "100%",
-    maxWidth: 760,
-    background: "rgba(255,255,255,0.85)",
+    maxWidth: 780,
+    background: "rgba(255,255,255,0.9)",
     border: "1px solid #d6d3d1",
     borderRadius: 28,
     padding: 28,
@@ -835,7 +975,7 @@ const styles = {
     color: "#57534e",
     fontSize: 17,
     lineHeight: 1.6,
-    maxWidth: 620,
+    maxWidth: 640,
     margin: "0 auto 24px",
   },
   formGrid: {
@@ -847,19 +987,21 @@ const styles = {
   inputLabel: {
     display: "grid",
     gap: 6,
-    fontWeight: 700,
+    fontWeight: 800,
     color: "#292524",
   },
   input: {
     border: "1px solid #d6d3d1",
-    borderRadius: 16,
-    padding: "13px 14px",
+    borderRadius: 14,
+    padding: "12px 13px",
     fontSize: 15,
     outline: "none",
+    width: "100%",
+    boxSizing: "border-box",
   },
   mainButton: {
     width: "100%",
-    marginTop: 18,
+    marginTop: 16,
     background: "#ea580c",
     color: "white",
     border: "none",
@@ -874,22 +1016,20 @@ const styles = {
     background: "#f5f5f4",
     color: "#1c1917",
     fontFamily: "Arial, sans-serif",
+    paddingBottom: 32,
   },
   header: {
-    position: "sticky",
-    top: 0,
-    zIndex: 10,
-    background: "rgba(255,255,255,0.95)",
+    background: "rgba(255,255,255,0.96)",
     borderBottom: "1px solid #d6d3d1",
-    padding: 18,
+    padding: 16,
     display: "flex",
     justifyContent: "space-between",
-    gap: 16,
+    gap: 14,
     flexWrap: "wrap",
   },
   headerTitle: {
     margin: 0,
-    fontSize: 26,
+    fontSize: 25,
     fontWeight: 900,
   },
   smallText: {
@@ -900,8 +1040,11 @@ const styles = {
   },
   statsGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(5, minmax(90px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(82px, 1fr))",
     gap: 8,
+    minWidth: 320,
+    flex: 1,
+    maxWidth: 620,
   },
   statBox: {
     background: "#fafaf9",
@@ -914,29 +1057,60 @@ const styles = {
     color: "#78716c",
     fontSize: 11,
     textTransform: "uppercase",
-    fontWeight: 800,
+    fontWeight: 900,
   },
   statValue: {
     margin: "4px 0 0",
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: 900,
   },
-  layout: {
-    maxWidth: 1280,
+  navBar: {
+    maxWidth: 1180,
+    margin: "14px auto 0",
+    padding: "0 16px",
+    display: "grid",
+    gridTemplateColumns: "repeat(5, 1fr)",
+    gap: 8,
+  },
+  navButton: {
+    border: "1px solid #d6d3d1",
+    background: "white",
+    color: "#44403c",
+    borderRadius: 16,
+    padding: "11px 8px",
+    fontWeight: 900,
+    cursor: "pointer",
+    display: "grid",
+    gap: 4,
+  },
+  navButtonActive: {
+    border: "1px solid #ea580c",
+    background: "#ffedd5",
+    color: "#9a3412",
+    borderRadius: 16,
+    padding: "11px 8px",
+    fontWeight: 900,
+    cursor: "pointer",
+    display: "grid",
+    gap: 4,
+  },
+  content: {
+    maxWidth: 1180,
     margin: "0 auto",
-    padding: 20,
-    display: "grid",
-    gridTemplateColumns: "1.45fr 0.8fr",
-    gap: 18,
+    padding: 16,
   },
-  leftColumn: {
+  messageRow: {
     display: "grid",
-    gap: 18,
+    gap: 10,
+    marginBottom: 14,
   },
-  rightColumn: {
-    display: "grid",
-    gap: 18,
-    alignContent: "start",
+  guideBox: {
+    background: "#ecfccb",
+    border: "1px solid #bef264",
+    color: "#365314",
+    borderRadius: 18,
+    padding: 14,
+    fontWeight: 700,
   },
   panel: {
     background: "white",
@@ -951,33 +1125,34 @@ const styles = {
     gap: 14,
     alignItems: "center",
     marginBottom: 14,
+    flexWrap: "wrap",
   },
   sectionTitle: {
     margin: 0,
     fontSize: 24,
     fontWeight: 900,
   },
-  townGrid: {
+  mapArea: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(145px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
     gap: 14,
     background: "linear-gradient(135deg, #fde68a, #e7e5e4, #fed7aa)",
     borderRadius: 20,
     padding: 16,
   },
   townTile: {
-    minHeight: 110,
-    background: "rgba(255,255,255,0.82)",
-    border: "1px solid #d6d3d1",
+    minHeight: 120,
+    background: "rgba(255,255,255,0.88)",
     borderRadius: 20,
     padding: 14,
+    boxSizing: "border-box",
   },
   townIcon: {
     fontSize: 38,
   },
   cardsGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(245px, 1fr))",
     gap: 14,
   },
   callCard: {
@@ -992,8 +1167,14 @@ const styles = {
     borderRadius: 20,
     padding: 16,
   },
+  techCard: {
+    background: "#fafaf9",
+    border: "1px solid #d6d3d1",
+    borderRadius: 20,
+    padding: 16,
+  },
   cardIcon: {
-    fontSize: 40,
+    fontSize: 42,
   },
   cardTitle: {
     margin: "6px 0",
@@ -1016,7 +1197,26 @@ const styles = {
     border: "none",
     borderRadius: 12,
     padding: "10px 12px",
-    fontWeight: 800,
+    fontWeight: 900,
+    cursor: "pointer",
+  },
+  greenSmallButton: {
+    background: "#16a34a",
+    color: "white",
+    border: "none",
+    borderRadius: 12,
+    padding: "10px 12px",
+    fontWeight: 900,
+    cursor: "pointer",
+  },
+  lightSmallButton: {
+    marginTop: 10,
+    background: "white",
+    color: "#1c1917",
+    border: "1px solid #d6d3d1",
+    borderRadius: 12,
+    padding: "10px 12px",
+    fontWeight: 900,
     cursor: "pointer",
   },
   darkButton: {
@@ -1025,12 +1225,11 @@ const styles = {
     border: "none",
     borderRadius: 12,
     padding: "10px 14px",
-    fontWeight: 800,
+    fontWeight: 900,
     cursor: "pointer",
   },
   darkFullButton: {
     width: "100%",
-    marginTop: 14,
     background: "#1c1917",
     color: "white",
     border: "none",
@@ -1041,7 +1240,6 @@ const styles = {
   },
   lightFullButton: {
     width: "100%",
-    marginTop: 10,
     background: "white",
     color: "#1c1917",
     border: "1px solid #d6d3d1",
@@ -1064,7 +1262,7 @@ const styles = {
     color: "#991b1b",
     borderRadius: 12,
     padding: 10,
-    fontWeight: 800,
+    fontWeight: 900,
     fontSize: 14,
   },
   emptyBox: {
@@ -1101,6 +1299,12 @@ const styles = {
     borderRadius: 999,
     transition: "width 0.3s ease",
   },
+  bonusText: {
+    color: "#15803d",
+    fontWeight: 900,
+    margin: "4px 0",
+    fontSize: 13,
+  },
   message: {
     background: "#ffedd5",
     border: "1px solid #fdba74",
@@ -1109,24 +1313,24 @@ const styles = {
     padding: 14,
     fontWeight: 800,
     lineHeight: 1.4,
-    marginTop: 16,
-  },
-  techList: {
-    display: "grid",
-    gap: 10,
-    marginTop: 14,
-  },
-  techCard: {
-    background: "#fafaf9",
-    border: "1px solid #d6d3d1",
-    borderRadius: 18,
-    padding: 14,
   },
   statusBadge: {
     borderRadius: 999,
     padding: "5px 9px",
     fontWeight: 900,
     fontSize: 12,
+  },
+  renameBox: {
+    display: "grid",
+    gridTemplateColumns: "1fr auto",
+    gap: 8,
+    marginTop: 10,
+  },
+  actionRow: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+    gap: 10,
+    marginTop: 16,
   },
   buildingList: {
     display: "grid",
@@ -1152,5 +1356,14 @@ const styles = {
     padding: "10px 14px",
     fontWeight: 900,
     cursor: "not-allowed",
+  },
+  lockedButton: {
+    background: "#e7e5e4",
+    color: "#78716c",
+    border: "none",
+    borderRadius: 12,
+    padding: "10px 14px",
+    fontWeight: 900,
+    cursor: "pointer",
   },
 };
